@@ -1,0 +1,23 @@
+{
+  "name": "munae",
+  "version": "1.0.0",
+  "description": "proyecto sistema de busqueda infografica munae",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start":"electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ricardohp22/Munae.git"
+  },
+  "author": "RicardoHP",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ricardohp22/Munae/issues"
+  },
+  "homepage": "https://github.com/Ricardohp22/Munae#readme",
+  "devDependencies": {
+    "electron": "^38.1.0"
+  }
+}
