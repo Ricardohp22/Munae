@@ -1,0 +1,105 @@
+<!-- src/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>MUNAE - Registro de Obras</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="p-4">
+  <div class="container">
+    <h1 class="mb-4">Registrar Obra</h1>
+    <form id="obraForm" enctype="multipart/form-data">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label>No. SIGROPAM</label>
+          <input type="text" class="form-control" id="no_sigropam" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label>Nombre del artista</label>
+          <input type="text" class="form-control" id="artista" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label>Título</label>
+          <input type="text" class="form-control" id="titulo">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label>Fecha</label>
+          <input type="text" class="form-control" id="fecha">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label>Técnica</label>
+          <input type="text" class="form-control" id="tecnica">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label>Tiraje</label>
+          <input type="text" class="form-control" id="tiraje">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label>Medidas del soporte</label>
+          <input type="text" class="form-control" id="medidas_soporte">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-3 mb-3">
+          <label>Medidas de la imagen</label>
+          <input type="text" class="form-control" id="medidas_imagen">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label>Ubicación topológica</label>
+          <input type="text" class="form-control" id="ubicacion_topologica">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label>Ubicación topográfica</label>
+          <input type="text" class="form-control" id="ubicacion_topografica">
+        </div>
+        <div class="col-md-3 mb-3">
+          <label>Estado de conservación</label>
+          <input type="text" class="form-control" id="estado_conservacion">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label>Observaciones</label>
+        <textarea class="form-control" id="observaciones" rows="2"></textarea>
+      </div>
+      <div class="mb-3">
+        <label>Descripción</label>
+        <textarea class="form-control" id="descripcion" rows="2"></textarea>
+      </div>
+      <div class="mb-3">
+        <label>Exposiciones</label>
+        <textarea class="form-control" id="exposiciones" rows="2"></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label>Imagen Baja Resolución</label>
+        <div class="input-group">
+          <input type="text" id="imagen_baja" class="form-control" readonly />
+          <button type="button" id="btnImagenBaja" class="btn btn-secondary">Seleccionar</button>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label>Imagen Alta Resolución</label>
+        <div class="input-group">
+          <input type="text" id="imagen_alta" class="form-control" readonly />
+          <button type="button" id="btnImagenAlta" class="btn btn-secondary">Seleccionar</button>
+       </div>
+      </div>
+
+
+      <button type="submit" class="btn btn-primary">Guardar Obra</button>
+    </form>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+
+</html>
