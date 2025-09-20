@@ -9,95 +9,166 @@
 </head>
 
 <body class="p-4">
-  <div class="container">
-    <h1 class="mb-4">Registrar Obra</h1>
-    <form id="obraForm" enctype="multipart/form-data">
-      <div class="row">
-        <div class="col-md-4 mb-3">
-          <label>No. SIGROPAM</label>
-          <input type="text" class="form-control" id="no_sigropam" required>
-        </div>
-        <div class="col-md-4 mb-3">
-          <label>Nombre del artista</label>
-          <input type="text" class="form-control" id="artista" required>
-        </div>
-        <div class="col-md-4 mb-3">
-          <label>Título</label>
-          <input type="text" class="form-control" id="titulo">
-        </div>
+  <div class="container mt-4">
+    <h2 class="mb-3">Registro de Obra</h2>
+    <p><small><span class="text-danger">*</span> Campos obligatorios</small></p>
+
+    <form id="form-obra">
+      <!-- Artista -->
+      <div class="mb-3">
+        <label for="id_artista" class="form-label">Artista <span class="text-danger">*</span></label>
+        <select id="id_artista" class="form-select" required>
+          <option value="">Seleccione un artista</option>
+          <!-- opciones dinámicas -->
+        </select>
       </div>
 
-      <div class="row">
-        <div class="col-md-3 mb-3">
-          <label>Fecha</label>
-          <input type="text" class="form-control" id="fecha">
-        </div>
-        <div class="col-md-3 mb-3">
-          <label>Técnica</label>
-          <input type="text" class="form-control" id="tecnica">
-        </div>
-        <div class="col-md-3 mb-3">
-          <label>Tiraje</label>
-          <input type="text" class="form-control" id="tiraje">
-        </div>
-        <div class="col-md-3 mb-3">
-          <label>Medidas del soporte</label>
-          <input type="text" class="form-control" id="medidas_soporte">
-        </div>
+      <!-- Título -->
+      <div class="mb-3">
+        <label for="titulo" class="form-label">Título de la obra <span class="text-danger">*</span></label>
+        <input type="text" id="titulo" class="form-control" maxlength="100" required>
       </div>
 
-      <div class="row">
-        <div class="col-md-3 mb-3">
-          <label>Medidas de la imagen</label>
-          <input type="text" class="form-control" id="medidas_imagen">
+      <!-- Descripción -->
+      <div class="mb-3">
+        <label for="descripcion" class="form-label">Descripción</label>
+        <input type="text" id="descripcion" class="form-control" maxlength="200">
+      </div>
+
+      <!-- Año -->
+      <div class="mb-3">
+        <label for="fecha" class="form-label">Año <span class="text-danger">*</span></label>
+        <input type="number" id="fecha" class="form-control" min="1000" max="9999" required>
+      </div>
+
+      <!-- Técnica -->
+      <div class="mb-3">
+        <label for="id_tecnica" class="form-label">Técnica</label>
+        <select id="id_tecnica" class="form-select">
+          <option value="">Seleccione una técnica</option>
+          <!-- opciones dinámicas -->
+        </select>
+      </div>
+
+      <!-- Tiraje -->
+      <div class="mb-3">
+        <label for="tiraje" class="form-label">Tiraje</label>
+        <input type="text" id="tiraje" class="form-control" maxlength="50">
+      </div>
+
+      <!-- Dimensiones soporte -->
+      <fieldset class="border p-3 mb-3">
+        <legend class="w-auto">Dimensiones Soporte (cm)</legend>
+        <div class="row">
+          <div class="col">
+            <label for="soporte_ancho" class="form-label">Ancho</label>
+            <input type="number" id="soporte_ancho" class="form-control" min="0">
+          </div>
+          <div class="col">
+            <label for="soporte_largo" class="form-label">Alto</label>
+            <input type="number" id="soporte_largo" class="form-control" min="0">
+          </div>
         </div>
-        <div class="col-md-3 mb-3">
-          <label>Ubicación topológica</label>
-          <input type="text" class="form-control" id="ubicacion_topologica">
+      </fieldset>
+
+      <!-- Dimensiones imagen -->
+      <fieldset class="border p-3 mb-3">
+        <legend class="w-auto">Dimensiones Imagen (cm)</legend>
+        <div class="row">
+          <div class="col">
+            <label for="imagen_ancho" class="form-label">Ancho</label>
+            <input type="number" id="imagen_ancho" class="form-control" min="0">
+          </div>
+          <div class="col">
+            <label for="imagen_largo" class="form-label">Alto</label>
+            <input type="number" id="imagen_largo" class="form-control" min="0">
+          </div>
         </div>
-        <div class="col-md-3 mb-3">
-          <label>Ubicación topográfica</label>
-          <input type="text" class="form-control" id="ubicacion_topografica">
+      </fieldset>
+
+      <!-- Ubicaciones topológicas -->
+      <fieldset class="border p-3 mb-3">
+        <legend class="w-auto">Ubicación Topológica</legend>
+
+        <!-- Almacen general -->
+        <div class="mb-3">
+          <label class="form-label">Almacén General</label>
+          <select id="ubi_general_tipo" class="form-select">
+            <!-- tipos dinámicos -->
+          </select>
+          <select id="ubi_general" class="form-select mt-2">
+            <!-- ubicaciones dinámicas -->
+          </select>
         </div>
-        <div class="col-md-3 mb-3">
-          <label>Estado de conservación</label>
-          <input type="text" class="form-control" id="estado_conservacion">
+
+        <!-- Subdivisión -->
+        <div class="mb-3">
+          <label class="form-label">Subdivisión</label>
+          <select id="ubi_sub_tipo" class="form-select">
+            <!-- tipos dinámicos -->
+          </select>
+          <select id="ubi_sub" class="form-select mt-2">
+            <!-- ubicaciones dinámicas -->
+          </select>
         </div>
+
+        <!-- Subdivisión 2 -->
+        <div class="mb-3">
+          <label class="form-label">Subdivisión 2</label>
+          <select id="ubi_sub2_tipo" class="form-select">
+            <!-- tipos dinámicos -->
+          </select>
+          <select id="ubi_sub2" class="form-select mt-2">
+            <!-- ubicaciones dinámicas -->
+          </select>
+        </div>
+
+        <!-- Especificación adicional -->
+        <div class="mb-3">
+          <label for="ubi_manual" class="form-label">Especificación adicional</label>
+          <input type="text" id="ubi_manual" class="form-control" maxlength="50">
+        </div>
+      </fieldset>
+
+      <!-- Ubicación topográfica -->
+      <div class="mb-3">
+        <label for="id_ubi_topografica" class="form-label">Ubicación Topográfica</label>
+        <select id="id_ubi_topografica" class="form-select">
+          <option value="">Seleccione una ubicación</option>
+        </select>
+      </div>
+
+      <!-- Otros campos -->
+      <div class="mb-3">
+        <label for="observaciones" class="form-label">Observaciones</label>
+        <input type="text" id="observaciones" class="form-control" maxlength="200">
       </div>
 
       <div class="mb-3">
-        <label>Observaciones</label>
-        <textarea class="form-control" id="observaciones" rows="2"></textarea>
-      </div>
-      <div class="mb-3">
-        <label>Descripción</label>
-        <textarea class="form-control" id="descripcion" rows="2"></textarea>
-      </div>
-      <div class="mb-3">
-        <label>Exposiciones</label>
-        <textarea class="form-control" id="exposiciones" rows="2"></textarea>
+        <label for="estado_conservacion" class="form-label">Estado de conservación</label>
+        <input type="text" id="estado_conservacion" class="form-control" maxlength="50">
       </div>
 
       <div class="mb-3">
-        <label>Imagen Baja Resolución</label>
-        <div class="input-group">
-          <input type="text" id="imagen_baja" class="form-control" readonly />
-          <button type="button" id="btnImagenBaja" class="btn btn-secondary">Seleccionar</button>
-        </div>
+        <label for="exposiciones" class="form-label">Exposiciones</label>
+        <input type="text" id="exposiciones" class="form-control" maxlength="100">
       </div>
 
+      <!-- Imágenes -->
       <div class="mb-3">
-        <label>Imagen Alta Resolución</label>
-        <div class="input-group">
-          <input type="text" id="imagen_alta" class="form-control" readonly />
-          <button type="button" id="btnImagenAlta" class="btn btn-secondary">Seleccionar</button>
-       </div>
+        <label for="img_baja" class="form-label">Imagen baja resolución</label>
+        <input type="file" id="img_baja" accept="image/*" class="form-control">
+      </div>
+      <div class="mb-3">
+        <label for="img_alta" class="form-label">Imagen alta resolución</label>
+        <input type="file" id="img_alta" accept="image/*" class="form-control">
       </div>
 
-
-      <button type="submit" class="btn btn-primary">Guardar Obra</button>
+      <!-- Botón -->
+      <button type="submit" class="btn btn-primary w-100">Guardar Obra</button>
     </form>
   </div>
+
 
   <script src="renderer.js"></script>
 </body>
