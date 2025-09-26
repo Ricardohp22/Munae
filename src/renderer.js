@@ -18,7 +18,7 @@ function populateSelectWithPlaceholder(sel, placeholderText = 'Seleccione...') {
 
 // Poblador genérico (rows = [{id_x, campo}])
 function populateSelect(sel, rows, valueKey, textFn, placeholder = 'Seleccione...') {
-    console.log(valueKey);
+  //console.log(valueKey);
   populateSelectWithPlaceholder(sel, placeholder);
   if (!rows || rows.length === 0) {
     const noOpt = createOption('', 'No hay elementos');
@@ -35,7 +35,7 @@ function populateSelect(sel, rows, valueKey, textFn, placeholder = 'Seleccione..
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("DOMContentLoaded");
+  console.log("DOMContentLoaded");
   try {
     // selects del DOM (asegúrate de que tengan estos ids en tu HTML)
     const selArtista = document.getElementById('id_artista');
@@ -131,3 +131,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Error inicializando selects:', err);
   }
 });
+
+//funcion para validar formulario regitro de obras
+function validarFormulario(datos) {
+  const errores = [];
+
+  if (!datos.id_artista) errores.push("Seleccione un artista");
+  if (!datos.id_sigropam) errores.push("Coloque el No. Sigropam");
+  if (!datos.titulo || !datos.titulo.trim()) errores.push("Ingrese el título");
+  if (!/^\d{4}$/.test(datos.fecha)) errores.push("Ingrese un año válido (4 dígitos)");
+  if (!datos.ubi_general) errores.push("Seleccione ubicación topológica (almacén general)");
+
+  // Dimensiones
+  ["medidas_soporte_ancho", "medidas_soporte_largo", "medidas_imagen_ancho", "medidas_imagen_largo"].forEach(campo => {
+    if (datos[campo] && isNaN(Number(datos[campo]))) {
+      errores.push(`${campo.replace(/_/g, " ")} debe ser un número`);
+    }
+  });
+
+  return errores;
+}
+
+// Botones para abrir el diálogo nativo
+  document.getElementById('btnImgBaja').addEventListener('click', async () => {
+    const ruta = await window.electronAPI.seleccionarImagen();
+    if (ruta) document.getElementById('img_baja_path').value = ruta;
+    console.log('ruta_baja', ruta);
+  });
+
+  document.getElementById('btnImgAlta').addEventListener('click', async () => {
+    const ruta = await window.electronAPI.seleccionarImagen();
+    if (ruta) document.getElementById('img_alta_path').value = ruta;
+    console.log('ruta_alta', ruta);
+  });
+
+//hacer validacion al dar click en guardar
+document.getElementById("btnGuardar").addEventListener("click", async () => {
+  const datos = {
+    id_artista: document.getElementById("id_artista").value,
+    id_sigropam: document.getElementById("sigropam").value,
+    titulo: document.getElementById("titulo").value,
+    descripcion: document.getElementById("descripcion").value,
+    fecha: document.getElementById("fecha").value,
+    id_tecnica: document.getElementById("id_tecnica").value,
+    tiraje: document.getElementById("tiraje").value,
+    medidas_soporte_ancho: document.getElementById("soporte_ancho").value,
+    medidas_soporte_largo: document.getElementById("soporte_largo").value,
+    medidas_imagen_ancho: document.getElementById("imagen_ancho").value,
+    medidas_imagen_largo: document.getElementById("imagen_largo").value,
+    ubi_general: document.getElementById("ubi_general").value,
+    ubi_sub: document.getElementById("ubi_sub").value,
+    ubi_sub2: document.getElementById("ubi_sub2").value,
+    ubi_topo_manual: document.getElementById("ubi_manual").value,
+    id_ubi_topografica: document.getElementById("id_ubi_topografica").value,
+    observaciones: document.getElementById("observaciones").value,
+    estado_conservacion: document.getElementById("estado_conservacion").value,
+    exposiciones: document.getElementById("exposiciones").value,
+    imagen_baja: document.getElementById("img_baja_path").value || null,
+    imagen_alta: document.getElementById("img_alta_path").value || null
+  };
+  //console.log(datos);
+  const errores = validarFormulario(datos);
+  if (errores.length) {
+    alert("Errores:\n" + errores.join("\n"));
+    return;
+  } else {
+    console.log('datos validados:', datos);
+  }
+
+  // Enviar a main.js
+  const resultado = await window.electronAPI.guardarObra(datos);
+  if (resultado.success) {
+    alert("¡Registro exitoso!");
+    document.getElementById("form-obra").reset();
+  } else {
+    alert("Error al guardar la obra:\n" + resultado.error);
+  }
+});
+

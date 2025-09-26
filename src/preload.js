@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 console.log("preload.js");
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  guardarObra: (datos) => ipcRenderer.send("guardar-obra", datos),
+  guardarObra: (datos) => ipcRenderer.invoke("guardar-obra", datos),
   seleccionarImagen: () => ipcRenderer.invoke("seleccionar-imagen"),
 
   // nuevas funciones para poblar selects

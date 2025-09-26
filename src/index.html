@@ -17,16 +17,22 @@
       <!-- Artista -->
       <div class="mb-3">
         <label for="id_artista" class="form-label">Artista <span class="text-danger">*</span></label>
-        <select id="id_artista" class="form-select" required>
+        <select id="id_artista" class="form-select">
           <option value="">Seleccione un artista</option>
           <!-- opciones dinámicas -->
         </select>
       </div>
 
+      <!-- Sigropam -->
+      <div class="mb-3">
+        <label for="sigropam" class="form-label">No. Sigropam <span class="text-danger">*</span></label>
+        <input type="text" id="sigropam" class="form-control" maxlength="100">
+      </div>
+
       <!-- Título -->
       <div class="mb-3">
         <label for="titulo" class="form-label">Título de la obra <span class="text-danger">*</span></label>
-        <input type="text" id="titulo" class="form-control" maxlength="100" required>
+        <input type="text" id="titulo" class="form-control" maxlength="100">
       </div>
 
       <!-- Descripción -->
@@ -38,7 +44,7 @@
       <!-- Año -->
       <div class="mb-3">
         <label for="fecha" class="form-label">Año <span class="text-danger">*</span></label>
-        <input type="number" id="fecha" class="form-control" min="1000" max="9999" required>
+        <input type="number" id="fecha" class="form-control" min="0" max="9999">
       </div>
 
       <!-- Técnica -->
@@ -92,7 +98,7 @@
 
         <!-- Almacen general -->
         <div class="mb-3">
-          <label class="form-label">Almacén General</label>
+          <label class="form-label">Almacén General<span class="text-danger">*</span></label>
           <select id="ubi_general_tipo" class="form-select">
             <!-- tipos dinámicos -->
           </select>
@@ -155,17 +161,27 @@
       </div>
 
       <!-- Imágenes -->
+      <!-- Imagen baja resolución (REEMPLAZA el input type="file") -->
       <div class="mb-3">
-        <label for="img_baja" class="form-label">Imagen baja resolución</label>
-        <input type="file" id="img_baja" accept="image/*" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label for="img_alta" class="form-label">Imagen alta resolución</label>
-        <input type="file" id="img_alta" accept="image/*" class="form-control">
+        <label class="form-label">Imagen baja resolución</label>
+        <div class="input-group">
+          <input type="text" id="img_baja_path" class="form-control" placeholder="Sin seleccionar" readonly>
+          <button type="button" id="btnImgBaja" class="btn btn-secondary">Seleccionar</button>
+        </div>
       </div>
 
+      <!-- Imagen alta resolución (REEMPLAZA el input type="file") -->
+      <div class="mb-3">
+        <label class="form-label">Imagen alta resolución</label>
+        <div class="input-group">
+          <input type="text" id="img_alta_path" class="form-control" placeholder="Sin seleccionar" readonly>
+          <button type="button" id="btnImgAlta" class="btn btn-secondary">Seleccionar</button>
+        </div>
+      </div>
+
+
       <!-- Botón -->
-      <button type="submit" class="btn btn-primary w-100">Guardar Obra</button>
+      <button id="btnGuardar" type="button" class="btn btn-primary w-100">Guardar Obra</button>
     </form>
   </div>
 
