@@ -665,6 +665,89 @@ ipcMain.on("artista-agregado", () => {
   }
 });
 
+// Insertar técnica
+ipcMain.handle("insert-tecnica", async (event, tecnica) => {
+  return new Promise((resolve) => {
+    const sqlCheck = `SELECT COUNT(*) as count FROM tecnicas WHERE tecnica = ?`;
+    db.get(sqlCheck, [tecnica], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "La técnica ya existe." });
+      }
+
+      const sqlInsert = `INSERT INTO tecnicas (tecnica) VALUES (?)`;
+      db.run(sqlInsert, [tecnica], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al insertar" });
+        resolve({ success: true, id: this.lastID });
+      });
+    });
+  });
+});
+
+// Abrir ventana para agregar técnica
+ipcMain.on("abrir-agregar-tecnica", (event) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/agregarTecnica.html");
+});
+
+ipcMain.on("tecnica-agregada", () => {
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send("tecnica-agregada");
+  }
+});
+// Insertar ubicación topográfica
+ipcMain.handle("insert-topografica", async (event, ubicacion) => {
+  return new Promise((resolve) => {
+    const sqlCheck = `SELECT COUNT(*) as count FROM ubicaciones_topograficas WHERE ubicacion = ?`;
+    db.get(sqlCheck, [ubicacion], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "La ubicación ya existe." });
+      }
+
+      const sqlInsert = `INSERT INTO ubicaciones_topograficas (ubicacion) VALUES (?)`;
+      db.run(sqlInsert, [ubicacion], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al insertar" });
+        resolve({ success: true, id: this.lastID });
+      });
+    });
+  });
+});
+
+// Abrir ventana para agregar ubicación topográfica
+ipcMain.on("abrir-agregar-topografica", (event) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/agregarTopografica.html");
+});
+
+ipcMain.on("topografica-agregada", () => {
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send("topografica-agregada");
+  }
+});
+
+
+
 
 app.whenReady().then(createWindow);
 

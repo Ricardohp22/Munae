@@ -3,10 +3,22 @@ const { contextBridge, ipcRenderer } = require("electron");
 console.log("preload.js");
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  // Ubicaciones Topográficas
+  notificarTopograficaAgregada: () => ipcRenderer.send("topografica-agregada"),
+  onTopograficaAgregada: (callback) => ipcRenderer.on("topografica-agregada", callback),
+  abrirAgregarTopografica: () => ipcRenderer.send("abrir-agregar-topografica"),
+  insertTopografica: (ubicacion) => ipcRenderer.invoke("insert-topografica", ubicacion),
+  // Técnicas
+  notificarTecnicaAgregada: () => ipcRenderer.send("tecnica-agregada"),
+  onTecnicaAgregada: (callback) => ipcRenderer.on("tecnica-agregada", callback),
+  abrirAgregarTecnica: () => ipcRenderer.send("abrir-agregar-tecnica"),
+  insertTecnica: (tecnica) => ipcRenderer.invoke("insert-tecnica", tecnica),
+  //artistas
   notificarArtistaAgregado: () => ipcRenderer.send("artista-agregado"),
   onArtistaAgregado: (callback) => ipcRenderer.on("artista-agregado", callback),
   abrirAgregarArtista: () => ipcRenderer.send("abrir-agregar-artista"),
   insertArtista: (artista) => ipcRenderer.invoke("insert-artista", artista),
+  //Roles de usuario
   setUserRole: (role) => ipcRenderer.send("set-user-role", role),
   descargarObra: (idObra) => ipcRenderer.invoke("descargar-obra", idObra),
   getImagenesCarpeta: (folderPath) => ipcRenderer.invoke("get-imagenes-carpeta", folderPath),

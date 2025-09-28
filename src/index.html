@@ -54,11 +54,18 @@
       <!-- Técnica -->
       <div class="mb-3">
         <label for="id_tecnica" class="form-label">Técnica</label>
-        <select id="id_tecnica" class="form-select">
-          <option value="">Seleccione una técnica</option>
-          <!-- opciones dinámicas -->
-        </select>
+        <div class="d-flex gap-2">
+          <select id="id_tecnica" class="form-select flex-grow-1">
+            <option value="">Seleccione una técnica</option>
+          </select>
+          <button type="button" class="btn btn-secondary"
+            onclick="window.electronAPI.abrirAgregarTecnica()">Agregar</button>
+        </div>
       </div>
+
+
+
+
 
       <!-- Tiraje -->
       <div class="mb-3">
@@ -141,12 +148,18 @@
       </fieldset>
 
       <!-- Ubicación topográfica -->
+      <!-- Ubicación topográfica -->
       <div class="mb-3">
         <label for="id_ubi_topografica" class="form-label">Ubicación Topográfica</label>
-        <select id="id_ubi_topografica" class="form-select">
-          <option value="">Seleccione una ubicación</option>
-        </select>
+        <div class="d-flex gap-2">
+          <select id="id_ubi_topografica" class="form-select flex-grow-1">
+            <option value="">Seleccione una ubicación</option>
+          </select>
+          <button type="button" class="btn btn-secondary"
+            onclick="window.electronAPI.abrirAgregarTopografica()">Agregar</button>
+        </div>
       </div>
+
 
       <!-- Otros campos -->
       <div class="mb-3">

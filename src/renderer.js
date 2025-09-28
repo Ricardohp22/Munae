@@ -283,6 +283,20 @@ window.electronAPI.onArtistaAgregado(async () => {
     (r) => `${(r.apellido_paterno || '')} ${(r.apellido_materno || '')}, ${r.nombre}`.trim(),
     'Seleccione un artista *');
 });
+window.electronAPI.onTecnicaAgregada(async () => {
+  console.log("Refrescando técnicas");
+  const tecnicas = await window.electronAPI.getTecnicas();
+  const selTecnica = document.getElementById("id_tecnica");
+  populateSelect(selTecnica, tecnicas, "id_tecnica", "tecnica", "Seleccione una técnica");
+});
+window.electronAPI.onTopograficaAgregada(async () => {
+  console.log("Refrescando ubicaciones topográficas");
+  const topograficas = await window.electronAPI.getUbicacionesTopograficas();
+  const selTopografica = document.getElementById("id_ubi_topografica");
+  populateSelect(selTopografica, topograficas, "id_ubicacion_topografica", "ubicacion", "Seleccione una ubicación");
+});
+
+
 
 
 
