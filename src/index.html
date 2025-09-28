@@ -161,23 +161,26 @@
       </div>
 
       <!-- Imágenes -->
-      <!-- Imagen baja resolución (REEMPLAZA el input type="file") -->
+      <!-- Imágenes BAJA resolución -->
       <div class="mb-3">
-        <label class="form-label">Imagen baja resolución</label>
-        <div class="input-group">
-          <input type="text" id="img_baja_path" class="form-control" placeholder="Sin seleccionar" readonly>
-          <button type="button" id="btnImgBaja" class="btn btn-secondary">Seleccionar</button>
+        <label class="form-label">Imágenes baja resolución</label>
+        <div class="d-flex gap-2 mb-2">
+          <button type="button" id="btnAddBaja" class="btn btn-secondary">Agregar (hasta 4)</button>
+          <span class="text-muted" id="bajaCount">(0/4)</span>
         </div>
+        <ul id="listBaja" class="list-group small"></ul>
       </div>
 
-      <!-- Imagen alta resolución (REEMPLAZA el input type="file") -->
+      <!-- Imágenes ALTA resolución -->
       <div class="mb-3">
-        <label class="form-label">Imagen alta resolución</label>
-        <div class="input-group">
-          <input type="text" id="img_alta_path" class="form-control" placeholder="Sin seleccionar" readonly>
-          <button type="button" id="btnImgAlta" class="btn btn-secondary">Seleccionar</button>
+        <label class="form-label">Imágenes alta resolución</label>
+        <div class="d-flex gap-2 mb-2">
+          <button type="button" id="btnAddAlta" class="btn btn-secondary">Agregar (hasta 4)</button>
+          <span class="text-muted" id="altaCount">(0/4)</span>
         </div>
+        <ul id="listAlta" class="list-group small"></ul>
       </div>
+
 
 
       <!-- Botón -->

@@ -153,17 +153,17 @@ function validarFormulario(datos) {
 }
 
 // Botones para abrir el diálogo nativo
-  document.getElementById('btnImgBaja').addEventListener('click', async () => {
-    const ruta = await window.electronAPI.seleccionarImagen();
-    if (ruta) document.getElementById('img_baja_path').value = ruta;
-    console.log('ruta_baja', ruta);
-  });
+/* document.getElementById('btnImgBaja').addEventListener('click', async () => {
+  const ruta = await window.electronAPI.seleccionarImagen();
+  if (ruta) document.getElementById('img_baja_path').value = ruta;
+  console.log('ruta_baja', ruta);
+});
 
-  document.getElementById('btnImgAlta').addEventListener('click', async () => {
-    const ruta = await window.electronAPI.seleccionarImagen();
-    if (ruta) document.getElementById('img_alta_path').value = ruta;
-    console.log('ruta_alta', ruta);
-  });
+document.getElementById('btnImgAlta').addEventListener('click', async () => {
+  const ruta = await window.electronAPI.seleccionarImagen();
+  if (ruta) document.getElementById('img_alta_path').value = ruta;
+  console.log('ruta_alta', ruta);
+}); */
 
 //hacer validacion al dar click en guardar
 document.getElementById("btnGuardar").addEventListener("click", async () => {
@@ -187,10 +187,10 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
     observaciones: document.getElementById("observaciones").value,
     estado_conservacion: document.getElementById("estado_conservacion").value,
     exposiciones: document.getElementById("exposiciones").value,
-    imagen_baja: document.getElementById("img_baja_path").value || null,
-    imagen_alta: document.getElementById("img_alta_path").value || null
+    imagenes_baja: imgsBaja,   // <<--- ahora arrays
+    imagenes_alta: imgsAlta    // <<--- ahora arrays
   };
-  //console.log(datos);
+  console.log(datos);
   const errores = validarFormulario(datos);
   if (errores.length) {
     alert("Errores:\n" + errores.join("\n"));
@@ -204,8 +204,77 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
   if (resultado.success) {
     alert("¡Registro exitoso!");
     document.getElementById("form-obra").reset();
+    imgsBaja = []; imgsAlta = [];
+    renderAllLists();
   } else {
     alert("Error al guardar la obra:\n" + resultado.error);
+    //console.log(resultado.error);
   }
 });
+
+//Funciones para agregar multiples imagenes
+// --- Estado en memoria ---
+let imgsBaja = [];
+let imgsAlta = [];
+
+function baseName(p) {
+  // muestra solo nombre.ext
+  try { return p.split(/[/\\]/).pop(); } catch { return p; }
+}
+
+function renderList(listEl, items) {
+  listEl.innerHTML = "";
+  if (!items.length) {
+    const li = document.createElement("li");
+    li.className = "list-group-item text-muted";
+    li.textContent = "Sin imágenes";
+    listEl.appendChild(li);
+    return;
+  }
+  items.forEach((p, idx) => {
+    const li = document.createElement("li");
+    li.className = "list-group-item d-flex justify-content-between align-items-center";
+    li.textContent = baseName(p);
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-sm btn-outline-danger";
+    btn.textContent = "Quitar";
+    btn.onclick = () => {
+      items.splice(idx, 1);
+      renderAllLists();
+    };
+
+    li.appendChild(btn);
+    listEl.appendChild(li);
+  });
+}
+
+function renderAllLists() {
+  renderList(document.getElementById("listBaja"), imgsBaja);
+  renderList(document.getElementById("listAlta"), imgsAlta);
+  document.getElementById("bajaCount").textContent = `(${imgsBaja.length}/4)`;
+  document.getElementById("altaCount").textContent = `(${imgsAlta.length}/4)`;
+}
+
+document.getElementById("btnAddBaja").addEventListener("click", async () => {
+  const cupo = 4 - imgsBaja.length;
+  if (cupo <= 0) return alert("Ya tienes 4 imágenes de baja.");
+  const paths = await window.electronAPI.seleccionarImagenes({ max: cupo });
+  // evita duplicados
+  paths.forEach(p => { if (!imgsBaja.includes(p)) imgsBaja.push(p); });
+  renderAllLists();
+});
+
+document.getElementById("btnAddAlta").addEventListener("click", async () => {
+  const cupo = 4 - imgsAlta.length;
+  if (cupo <= 0) return alert("Ya tienes 4 imágenes de alta.");
+  const paths = await window.electronAPI.seleccionarImagenes({ max: cupo });
+  paths.forEach(p => { if (!imgsAlta.includes(p)) imgsAlta.push(p); });
+  renderAllLists();
+});
+
+// Llama render inicial para mostrar "Sin imágenes"
+renderAllLists();
+
+
 

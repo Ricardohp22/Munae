@@ -10,13 +10,40 @@ const createWindow = () => {
     height: 700,
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
-      contextIsolation: true, // obligatorio
-      nodeIntegration: false  // seguridad
+      contextIsolation: true,
+      nodeIntegration: false
     },
   });
 
-  win.loadFile("src/index.html");
+  // Al iniciar siempre mostrar login
+  win.loadFile("src/login.html");
+
+  // Guardamos una referencia para usarla en otros IPC
+  global.mainWindow = win;
 };
+
+//ficha
+function abrirFicha(obraId, parentWindow) {
+  const fichaWin = new BrowserWindow({
+    width: 800,
+    height: 600,
+    parent: parentWindow,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+
+  fichaWin.loadFile("src/ficha.html");
+
+  // Enviar el id de la obra a la nueva ventana
+  fichaWin.webContents.once("did-finish-load", () => {
+    fichaWin.webContents.send("cargar-ficha", obraId);
+  });
+}
+
+
 
 // Helper para convertir callback -> Promise
 function allAsync(sql, params = []) {
@@ -73,6 +100,19 @@ ipcMain.handle("seleccionar-imagen", async () => {
   return canceled ? null : filePaths[0];
 });
 
+// selleccionar imagenes
+ipcMain.handle("seleccionar-imagenes", async (event, opts = {}) => {
+  const max = Number(opts.max || 4);
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ["openFile", "multiSelections"],
+    filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png"] }]
+  });
+  if (canceled) return [];
+  // devuelve hasta 'max'
+  return filePaths.slice(0, max);
+});
+
+
 
 
 // Carpeta para guardar imágenes
@@ -81,39 +121,66 @@ if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true }); */
 
 // Guardar obra
 ipcMain.handle("guardar-obra", async (event, datos) => {
-  console.log('guardando obra');
   return new Promise((resolve) => {
+    const createdDirs = [];
+
+    // Sanear nombre para carpeta
+    const noSig = String(datos.id_sigropam || datos.no_sigropam || "").trim();
+    if (!noSig) {
+      return resolve({ success: false, error: "no_sigropam es requerido para nombrar las carpetas." });
+    }
+    const safeNoSig = noSig.replace(/[^A-Za-z0-9_\-]/g, "_");
+
+    // Limitar por seguridad
+    const imgsBaja = Array.isArray(datos.imagenes_baja) ? datos.imagenes_baja.slice(0, 4) : [];
+    const imgsAlta = Array.isArray(datos.imagenes_alta) ? datos.imagenes_alta.slice(0, 4) : [];
+
+    const imgBaseDir = path.join(__dirname, "data/images");
+    if (!fs.existsSync(imgBaseDir)) fs.mkdirSync(imgBaseDir, { recursive: true });
+
+    let bajaDirPath = null;
+    let altaDirPath = null;
+
+    // Helper: crea carpeta limpia
+    function ensureCleanDir(dirPath) {
+      if (fs.existsSync(dirPath)) {
+        fs.rmSync(dirPath, { recursive: true, force: true }); // limpiar si existía
+      }
+      fs.mkdirSync(dirPath, { recursive: true });
+      createdDirs.push(dirPath);
+    }
+
+    // Copiar imágenes a carpetas (si hay)
+    try {
+      if (imgsBaja.length > 0) {
+        bajaDirPath = path.join(imgBaseDir, `${safeNoSig}_baja`);
+        ensureCleanDir(bajaDirPath);
+        imgsBaja.forEach((src, idx) => {
+          const ext = path.extname(src) || ".jpg";
+          const dest = path.join(bajaDirPath, `${safeNoSig}_baja_${idx + 1}${ext}`);
+          fs.copyFileSync(src, dest);
+        });
+      }
+      if (imgsAlta.length > 0) {
+        altaDirPath = path.join(imgBaseDir, `${safeNoSig}_alta`);
+        ensureCleanDir(altaDirPath);
+        imgsAlta.forEach((src, idx) => {
+          const ext = path.extname(src) || ".jpg";
+          const dest = path.join(altaDirPath, `${safeNoSig}_alta_${idx + 1}${ext}`);
+          fs.copyFileSync(src, dest);
+        });
+      }
+    } catch (err) {
+      // Limpieza
+      createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
+      console.error("Error copiando imágenes:", err);
+      return resolve({ success: false, error: "Error al copiar imágenes" });
+    }
+
+    // Ahora la transacción de DB
     db.serialize(() => {
       db.run("BEGIN TRANSACTION");
 
-      // --- preparar rutas de imágenes ---
-      const imgDir = path.join(__dirname, "data/images");
-      if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
-
-      let bajaPath = null;
-      let altaPath = null;
-
-      try {
-        console.log('datos.imagen', datos.imagen_baja);
-        console.log('bajaPath', bajaPath);
-        if (datos.imagen_baja) {
-          const nombreBaja = Date.now() + "_baja" + path.extname(datos.imagen_baja);
-          bajaPath = path.join(imgDir, nombreBaja);
-          fs.copyFileSync(datos.imagen_baja, bajaPath);
-        }
-        if (datos.imagen_alta) {
-          const nombreAlta = Date.now() + "_alta" + path.extname(datos.imagen_alta);
-          altaPath = path.join(imgDir, nombreAlta);
-          fs.copyFileSync(datos.imagen_alta, altaPath);
-        }
-      } catch (err) {
-        console.error("Error copiando imágenes:", err);
-        db.run("ROLLBACK");
-        resolve({ success: false, error: "Error al copiar imágenes" });
-        return;
-      }
-
-      // 1) INSERT obra
       const queryObra = `
         INSERT INTO obras (
           no_sigropam,
@@ -141,7 +208,7 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
       db.run(
         queryObra,
         [
-          datos.id_sigropam,                // ⚠️ tu input se llama sigropam; aquí usas id_sigropam. Mantén consistencia.
+          noSig,                               // usa el valor original (no el saneado) para DB
           datos.id_artista,
           datos.titulo,
           datos.fecha ? Number(datos.fecha) : null,
@@ -158,61 +225,57 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
           datos.estado_conservacion || null,
           datos.descripcion || null,
           datos.exposiciones || null,
-          bajaPath,                         // ✅ paths reales ya copiados a /data/images
-          altaPath
+          bajaDirPath,                         // 🔹 guardamos carpetas, no archivos
+          altaDirPath
         ],
         function (err) {
           if (err) {
-            console.error("Error insertando obra:", err.message);
             db.run("ROLLBACK");
-            resolve({ success: false, error: err.message });
-            return;
+            let userMessage = "Ocurrió un error al guardar la obra";
+            if (err.message.includes("UNIQUE constraint failed: obras.no_sigropam")) {
+              userMessage = "El número SIGROPAM ya existe en el sistema. Verifique e intente con uno diferente.";
+            }
+            // Limpieza de carpetas creadas
+            createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
+            console.error("Error insertando obra:", err.message);
+            return resolve({ success: false, error: userMessage });
           }
 
           const idObra = this.lastID;
-
-          // 2) INSERT ubicaciones topologicas (niveles existentes)
           const queryUbicacion = `
             INSERT INTO obra_ubicaciones_topologicas (id_obra, id_ubicacion_topologica, nivel)
             VALUES (?, ?, ?)
           `;
-
           const ubicaciones = [
             { id: datos.ubi_general, nivel: 1 },
             { id: datos.ubi_sub, nivel: 2 },
             { id: datos.ubi_sub2, nivel: 3 }
-          ];
+          ].filter(u => !!u.id);
 
-          let insertsPendientes = 0;
-          let huboError = false;
-
-          const finalizar = () => {
-            if (huboError) {
-              db.run("ROLLBACK");
-              resolve({ success: false, error: "Error al guardar ubicaciones" });
-            } else {
-              db.run("COMMIT");
-              resolve({ success: true, id: idObra });
-            }
-          };
-
-          // Si no hay ninguna ubicación, termina ya
-          const ubicacionesValidas = ubicaciones.filter(u => !!u.id);
-          if (ubicacionesValidas.length === 0) {
-            finalizar();
-            return;
+          if (ubicaciones.length === 0) {
+            db.run("COMMIT");
+            return resolve({ success: true, id: idObra });
           }
 
-          insertsPendientes = ubicacionesValidas.length;
+          let pendientes = ubicaciones.length;
+          let huboError = false;
 
-          ubicacionesValidas.forEach((u) => {
+          ubicaciones.forEach(u => {
             db.run(queryUbicacion, [idObra, u.id, u.nivel], (err2) => {
-              if (err2) {
-                console.error("Error insertando ubicación:", err2.message);
-                huboError = true;
+              if (err2) huboError = true;
+              pendientes -= 1;
+
+              if (pendientes === 0) {
+                if (huboError) {
+                  db.run("ROLLBACK");
+                  // Limpieza de carpetas creadas
+                  createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
+                  return resolve({ success: false, error: "Error al guardar ubicaciones" });
+                } else {
+                  db.run("COMMIT");
+                  return resolve({ success: true, id: idObra });
+                }
               }
-              insertsPendientes -= 1;
-              if (insertsPendientes === 0) finalizar();
             });
           });
         }
@@ -221,8 +284,217 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
   });
 });
 
+//ventana de login
+ipcMain.handle("login", async (event, usuario, password) => {
+  return new Promise((resolve) => {
+    const sql = `SELECT * FROM usuarios WHERE usuario = ?`;
+    db.get(sql, [usuario], (err, row) => {
+      if (err) {
+        resolve({ success: false, error: "Error interno de base de datos" });
+      } else if (!row) {
+        resolve({ success: false, error: "Usuario no encontrado" });
+      } else {
+        if (row.password === password) { // ⚠️ luego cambiamos a bcrypt
+          // Según el rol, cargar búsqueda
+          cargarBusqueda();
+          resolve({ success: true, rol: row.rol });
+        } else {
+          resolve({ success: false, error: "Contraseña incorrecta" });
+        }
+      }
+    });
+  });
+});
 
+//habilitar registro obrar para admin
+ipcMain.handle("abrir-registro", () => {
+  cargarRegistro();
+});
 
+function cargarBusqueda() {
+  if (global.mainWindow) {
+    global.mainWindow.loadFile("src/busqueda.html");
+  }
+}
 
+function cargarRegistro() {
+  if (global.mainWindow) {
+    global.mainWindow.loadFile("src/index.html"); // tu registro de obras
+  }
+}
+
+//busqueda
+ipcMain.handle("buscar-obras", async (event, filtros) => {
+  let condiciones = [];
+  let params = [];
+
+  if (filtros.sigropam) {
+    condiciones.push("o.no_sigropam LIKE ?");
+    params.push(`%${filtros.sigropam}%`);
+  }
+  if (filtros.autor) {
+    condiciones.push("o.id_artista = ?");
+    params.push(filtros.autor);
+  }
+
+  if (filtros.keyword) {
+    condiciones.push("(o.titulo LIKE ? OR o.descripcion LIKE ?)");
+    params.push(`%${filtros.keyword}%`, `%${filtros.keyword}%`);
+  }
+  if (filtros.anio) {
+    condiciones.push("o.fecha = ?");
+    params.push(filtros.anio);
+  }
+
+  // Técnica
+  if (filtros.tecnica) {
+    condiciones.push("o.id_tecnica = ?");
+    params.push(filtros.tecnica);
+  }
+
+  // Ubicación topológica (nivel 1)
+  if (filtros.topologica) {
+    condiciones.push("otu.id_ubicacion_topologica = ? AND otu.nivel = 1");
+    params.push(filtros.topologica);
+  }
+
+  // Ubicación topográfica
+  if (filtros.topografica) {
+    condiciones.push("o.id_ubicacion_topografica = ?");
+    params.push(filtros.topografica);
+  }
+
+  if (filtros.expo) {
+    condiciones.push("o.exposiciones LIKE ?");
+    params.push(`%${filtros.expo}%`);
+  }
+
+  const where = condiciones.length ? "WHERE " + condiciones.join(" AND ") : "";
+
+  const sql = `
+    SELECT o.id_obra, o.titulo, o.descripcion, a.nombre || ' ' || a.apellido_paterno AS autor
+    FROM obras o
+    JOIN artistas a ON o.id_artista = a.id_artista
+    LEFT JOIN obra_ubicaciones_topologicas otu ON o.id_obra = otu.id_obra
+    ${where}
+    GROUP BY o.id_obra
+    ORDER BY o.titulo
+  `;
+
+  return await allAsync(sql, params);
+});
+
+// Autores
+ipcMain.handle("get-filtro-artistas", async () => {
+  const sql = `
+    SELECT id_artista, nombre, apellido_paterno, apellido_materno
+    FROM artistas
+    ORDER BY apellido_paterno, apellido_materno, nombre
+  `;
+  return await allAsync(sql);
+});
+
+// Técnicas
+ipcMain.handle("get-filtro-tecnicas", async () => {
+  const sql = `SELECT id_tecnica, tecnica FROM tecnicas ORDER BY tecnica`;
+  return await allAsync(sql);
+});
+
+// Ubicación topográfica
+ipcMain.handle("get-filtro-topograficas", async () => {
+  const sql = `SELECT id_ubicacion_topografica, ubicacion FROM ubicaciones_topograficas ORDER BY ubicacion`;
+  return await allAsync(sql);
+});
+
+// Ubicación topológica (solo nivel 1)
+ipcMain.handle("get-filtro-topologicas", async () => {
+  const sql = `
+    SELECT DISTINCT ut.id_ubicacion_topologica, ut.ubicacion, tut.tipo
+    FROM obra_ubicaciones_topologicas otu
+    JOIN ubicaciones_topologicas ut ON otu.id_ubicacion_topologica = ut.id_ubicacion_topologica
+    JOIN tipo_ubicaciones_topologicas tut ON ut.id_tipo_ubicacion_topologica = tut.id_tipo_ubicacion_topologica
+    WHERE otu.nivel = 1
+    ORDER BY tut.tipo, ut.ubicacion
+  `;
+  return await allAsync(sql);
+});
+
+ipcMain.handle("get-ficha-obra", async (event, idObra) => {
+  const sql = `
+    SELECT o.no_sigropam, 
+           o.titulo, 
+           o.fecha, 
+           o.tiraje, 
+           o.medidas_soporte_ancho, 
+           o.medidas_soporte_largo, 
+           o.medidas_imagen_ancho, 
+           o.medidas_imagen_largo,
+           o.ubi_topolo_especificacion_manual,
+           o.observaciones,
+           o.estado_conservacion,
+           o.descripcion,
+           o.exposiciones,
+           o.path_img_baja,
+           o.path_img_alta,
+           a.nombre AS artista_nombre,
+           a.apellido_paterno,
+           a.apellido_materno,
+           t.tecnica,
+           utopo.ubicacion AS ubi_topografica
+    FROM obras o
+    JOIN artistas a ON o.id_artista = a.id_artista
+    LEFT JOIN tecnicas t ON o.id_tecnica = t.id_tecnica
+    LEFT JOIN ubicaciones_topograficas utopo ON o.id_ubicacion_topografica = utopo.id_ubicacion_topografica
+    WHERE o.id_obra = ?
+  `;
+
+  const obra = await allAsync(sql, [idObra]);
+
+  // Ubicación topológica nivel 1 con tipo
+  const sqlTopo = `
+    SELECT tut.tipo, ut.ubicacion
+    FROM obra_ubicaciones_topologicas otu
+    JOIN ubicaciones_topologicas ut ON otu.id_ubicacion_topologica = ut.id_ubicacion_topologica
+    JOIN tipo_ubicaciones_topologicas tut ON ut.id_tipo_ubicacion_topologica = tut.id_tipo_ubicacion_topologica
+    WHERE otu.id_obra = ? AND otu.nivel = 1
+  `;
+  const ubicacionesTopo = await allAsync(sqlTopo, [idObra]);
+
+  return { ...obra[0], ubicacionesTopo };
+});
+ipcMain.on("abrir-ficha", (event, idObra) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const fichaWin = new BrowserWindow({
+    width: 800,
+    height: 600,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+
+  fichaWin.loadFile("src/ficha.html");
+
+  fichaWin.webContents.once("did-finish-load", () => {
+    fichaWin.webContents.send("cargar-ficha", idObra);
+  });
+});
+
+const { pathToFileURL } = require("url");
+
+ipcMain.handle("get-imagenes-carpeta", async (event, folderPath) => {
+  try {
+    if (!folderPath || !fs.existsSync(folderPath)) return [];
+    const files = fs.readdirSync(folderPath)
+      .filter(f => /\.(jpg|jpeg|png)$/i.test(f)) // solo imágenes
+      .map(f => pathToFileURL(path.join(folderPath, f)).href); // convertir a file://
+    return files;
+  } catch (err) {
+    console.error("Error leyendo imágenes:", err);
+    return [];
+  }
+});
 
 app.whenReady().then(createWindow);
