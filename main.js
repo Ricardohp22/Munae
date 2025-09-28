@@ -621,18 +621,50 @@ ipcMain.handle("descargar-obra", async (event, idObra) => {
   }
 });
 
-app.whenReady().then(createWindow);
+// Insertar artista
+ipcMain.handle("insert-artista", async (event, artista) => {
+  const { nombre, apellido_paterno, apellido_materno } = artista;
 
-/* app.whenReady().then(() => {
-  // Atajo para abrir DevTools
-  globalShortcut.register("CommandOrControl+Shift+I", () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-      if (win.webContents.isDevToolsOpened()) {
-        win.webContents.closeDevTools();
-      } else {
-        win.webContents.openDevTools();
+  return new Promise((resolve) => {
+    const sqlCheck = `SELECT COUNT(*) as count FROM artistas 
+                      WHERE nombre = ? AND apellido_paterno = ? AND apellido_materno = ?`;
+    db.get(sqlCheck, [nombre, apellido_paterno, apellido_materno], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "El artista ya existe." });
       }
+
+      const sqlInsert = `INSERT INTO artistas (nombre, apellido_paterno, apellido_materno) 
+                         VALUES (?, ?, ?)`;
+      db.run(sqlInsert, [nombre, apellido_paterno, apellido_materno], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al insertar" });
+        resolve({ success: true, id: this.lastID });
+      });
+    });
+  });
+});
+
+// Abrir ventana para agregar artista
+ipcMain.on("abrir-agregar-artista", (event) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 400,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
     }
   });
-}); */
+  modal.loadFile("src/agregarArtista.html");
+});
+ipcMain.on("artista-agregado", () => {
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send("artista-agregado");
+  }
+});
+
+
+app.whenReady().then(createWindow);
+

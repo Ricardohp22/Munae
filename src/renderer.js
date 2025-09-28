@@ -273,6 +273,19 @@ document.getElementById("btnAddAlta").addEventListener("click", async () => {
   renderAllLists();
 });
 
+window.electronAPI.onArtistaAgregado(async () => {
+  console.log("Refrescando artistas");
+  //alert("Refrescando artistas");
+
+  const artistas = await window.electronAPI.getArtistas();
+  const selArtista = document.getElementById("id_artista");
+  populateSelect(selArtista, artistas, 'id_artista',
+    (r) => `${(r.apellido_paterno || '')} ${(r.apellido_materno || '')}, ${r.nombre}`.trim(),
+    'Seleccione un artista *');
+});
+
+
+
 // Llama render inicial para mostrar "Sin imágenes"
 renderAllLists();
 

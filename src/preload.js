@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 console.log("preload.js");
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  notificarArtistaAgregado: () => ipcRenderer.send("artista-agregado"),
+  onArtistaAgregado: (callback) => ipcRenderer.on("artista-agregado", callback),
+  abrirAgregarArtista: () => ipcRenderer.send("abrir-agregar-artista"),
+  insertArtista: (artista) => ipcRenderer.invoke("insert-artista", artista),
   setUserRole: (role) => ipcRenderer.send("set-user-role", role),
   descargarObra: (idObra) => ipcRenderer.invoke("descargar-obra", idObra),
   getImagenesCarpeta: (folderPath) => ipcRenderer.invoke("get-imagenes-carpeta", folderPath),

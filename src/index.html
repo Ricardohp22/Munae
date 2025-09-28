@@ -17,11 +17,15 @@
       <!-- Artista -->
       <div class="mb-3">
         <label for="id_artista" class="form-label">Artista <span class="text-danger">*</span></label>
-        <select id="id_artista" class="form-select">
-          <option value="">Seleccione un artista</option>
-          <!-- opciones dinámicas -->
-        </select>
+        <div class="d-flex gap-2">
+          <select id="id_artista" class="form-select flex-grow-1">
+            <option value="">Seleccione un artista</option>
+          </select>
+          <button type="button" class="btn btn-secondary"
+            onclick="window.electronAPI.abrirAgregarArtista()">Agregar</button>
+        </div>
       </div>
+
 
       <!-- Sigropam -->
       <div class="mb-3">
