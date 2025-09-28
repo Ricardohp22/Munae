@@ -1,7 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const db = require("./src/database");
+//const { globalShortcut } = require("electron");
+let currentUserRole = "admin"; // ⚡ Cambiar dinámicamente según login
 
 
 const createWindow = () => {
@@ -17,31 +19,54 @@ const createWindow = () => {
 
   // Al iniciar siempre mostrar login
   win.loadFile("src/login.html");
+  // Crear menú personalizado
+  const template = [
+    {
+      label: "Menú",
+      submenu: [
+        {
+          label: "Busqueda",
+          click: () => {
+            win.loadFile("src/busqueda.html");
+          }
+        },
+        {
+          label: "Agregar obra",
+          click: () => {
+            if (currentUserRole === "admin") {
+              win.loadFile("src/index.html");
+            } else {
+              dialog.showMessageBox(win, {
+                type: "warning",
+                title: "Acceso denegado",
+                message: "Solo los administradores pueden registrar obras."
+              });
+            }
+          }
+        }
+      ]
+    },
+    {
+      label: "Ver",
+      submenu: [
+        {
+          label: "Toggle DevTools",
+          accelerator: "Ctrl+Shift+I",
+          click: (item, focusedWindow) => {
+            if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+          }
+        }
+      ]
+    }
+
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 
   // Guardamos una referencia para usarla en otros IPC
   global.mainWindow = win;
 };
-
-//ficha
-function abrirFicha(obraId, parentWindow) {
-  const fichaWin = new BrowserWindow({
-    width: 800,
-    height: 600,
-    parent: parentWindow,
-    modal: true,
-    webPreferences: {
-      preload: path.join(__dirname, "src/preload.js"),
-      contextIsolation: true
-    }
-  });
-
-  fichaWin.loadFile("src/ficha.html");
-
-  // Enviar el id de la obra a la nueva ventana
-  fichaWin.webContents.once("did-finish-load", () => {
-    fichaWin.webContents.send("cargar-ficha", obraId);
-  });
-}
 
 
 
@@ -597,3 +622,17 @@ ipcMain.handle("descargar-obra", async (event, idObra) => {
 });
 
 app.whenReady().then(createWindow);
+
+/* app.whenReady().then(() => {
+  // Atajo para abrir DevTools
+  globalShortcut.register("CommandOrControl+Shift+I", () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      if (win.webContents.isDevToolsOpened()) {
+        win.webContents.closeDevTools();
+      } else {
+        win.webContents.openDevTools();
+      }
+    }
+  });
+}); */

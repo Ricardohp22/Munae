@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 console.log("preload.js");
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  setUserRole: (role) => ipcRenderer.send("set-user-role", role),
   descargarObra: (idObra) => ipcRenderer.invoke("descargar-obra", idObra),
   getImagenesCarpeta: (folderPath) => ipcRenderer.invoke("get-imagenes-carpeta", folderPath),
   // 🚀 Nueva API para ficha

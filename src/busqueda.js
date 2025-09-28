@@ -83,12 +83,12 @@ document.getElementById("btnBuscar").addEventListener("click", async () => {
     });
 
     // Delegación de evento para ver ficha
-    cont.addEventListener("click", (e) => {
+    /* cont.addEventListener("click", (e) => {
         if (e.target.classList.contains("ver-ficha")) {
             const idObra = e.target.getAttribute("data-id");
             window.electronAPI.abrirFicha(idObra);
         }
-    });
+    }); */
     cont.addEventListener("click", async (e) => {
         if (e.target.classList.contains("ver-ficha")) {
             const idObra = e.target.getAttribute("data-id");
