@@ -497,4 +497,103 @@ ipcMain.handle("get-imagenes-carpeta", async (event, folderPath) => {
   }
 });
 
+const PDFDocument = require("pdfkit");
+const archiver = require("archiver");
+
+ipcMain.handle("descargar-obra", async (event, idObra) => {
+  try {
+    // 1. Obtener datos de la obra
+    const obra = await allAsync(`
+      SELECT o.*, 
+             a.nombre AS artista_nombre, 
+             a.apellido_paterno, 
+             a.apellido_materno, 
+             t.tecnica, 
+             utopo.ubicacion AS ubi_topografica
+      FROM obras o
+      JOIN artistas a ON o.id_artista = a.id_artista
+      LEFT JOIN tecnicas t ON o.id_tecnica = t.id_tecnica
+      LEFT JOIN ubicaciones_topograficas utopo ON o.id_ubicacion_topografica = utopo.id_ubicacion_topografica
+      WHERE o.id_obra = ?
+    `, [idObra]);
+
+    if (!obra.length) throw new Error("Obra no encontrada");
+    const o = obra[0];
+
+    const ubicacionesTopo = await allAsync(`
+      SELECT tut.tipo, ut.ubicacion
+      FROM obra_ubicaciones_topologicas otu
+      JOIN ubicaciones_topologicas ut ON otu.id_ubicacion_topologica = ut.id_ubicacion_topologica
+      JOIN tipo_ubicaciones_topologicas tut ON ut.id_tipo_ubicacion_topologica = tut.id_tipo_ubicacion_topologica
+      WHERE otu.id_obra = ? AND otu.nivel = 1
+    `, [idObra]);
+
+    // 2. Crear dialog para elegir dónde guardar
+    const { filePath } = await dialog.showSaveDialog({
+      title: "Guardar obra",
+      defaultPath: `${o.no_sigropam || "obra"}.zip`,
+      filters: [{ name: "ZIP Files", extensions: ["zip"] }]
+    });
+
+    if (!filePath) return { success: false, error: "Cancelado por el usuario" };
+
+    // 3. Crear archivo ZIP
+    const output = fs.createWriteStream(filePath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(output);
+
+    // 4. Crear PDF de la ficha
+    const pdfPath = path.join(app.getPath("temp"), `${o.no_sigropam}_ficha.pdf`);
+    await new Promise((resolve, reject) => {
+      const doc = new PDFDocument();
+      const stream = fs.createWriteStream(pdfPath);
+      doc.pipe(stream);
+
+      doc.fontSize(16).text("Ficha Técnica de Obra", { align: "center" }).moveDown();
+      doc.fontSize(12).text(`No. SIGROPAM: ${o.no_sigropam}`);
+      doc.text(`Artista: ${o.apellido_paterno || ""} ${o.apellido_materno || ""}, ${o.artista_nombre}`);
+      doc.text(`Título: ${o.titulo}`);
+      doc.text(`Fecha: ${o.fecha}`);
+      doc.text(`Técnica: ${o.tecnica || ""}`);
+      doc.text(`Tiraje: ${o.tiraje || ""}`);
+      doc.text(`Medidas soporte: ${o.medidas_soporte_ancho} x ${o.medidas_soporte_largo} cm`);
+      doc.text(`Medidas imagen: ${o.medidas_imagen_ancho} x ${o.medidas_imagen_largo} cm`);
+      doc.text(`Ubicación topológica: ${ubicacionesTopo.map(u => `${u.tipo} - ${u.ubicacion}`).join(", ")}`);
+      doc.text(`Ubicación topográfica: ${o.ubi_topografica || ""}`);
+      doc.text(`Observaciones: ${o.observaciones || ""}`);
+      doc.text(`Estado de conservación: ${o.estado_conservacion || ""}`);
+      doc.text(`Descripción: ${o.descripcion || ""}`);
+      doc.text(`Exposiciones: ${o.exposiciones || ""}`);
+
+      doc.end();
+      stream.on("finish", resolve);
+      stream.on("error", reject);
+    });
+
+    // 5. Añadir PDF al ZIP
+    archive.file(pdfPath, { name: path.basename(pdfPath) });
+
+    // 6. Añadir imágenes de baja y alta resolución
+    function addImages(folderPath, folderName) {
+      if (folderPath && fs.existsSync(folderPath)) {
+        const files = fs.readdirSync(folderPath)
+          .filter(f => /\.(jpg|jpeg|png)$/i.test(f));
+        files.forEach(f => {
+          archive.file(path.join(folderPath, f), { name: `${folderName}/${f}` });
+        });
+      }
+    }
+
+    addImages(o.path_img_baja, "baja_resolucion");
+    addImages(o.path_img_alta, "alta_resolucion");
+
+    await archive.finalize();
+
+    return { success: true, filePath };
+  } catch (err) {
+    console.error("Error descargando obra:", err);
+    return { success: false, error: err.message };
+  }
+});
+
 app.whenReady().then(createWindow);

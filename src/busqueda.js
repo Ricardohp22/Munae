@@ -71,14 +71,14 @@ document.getElementById("btnBuscar").addEventListener("click", async () => {
         const card = document.createElement("div");
         card.className = "card mb-3";
         card.innerHTML = `
-    <div class="card-body">
-      <h5 class="card-title">${r.titulo}</h5>
-      <h6 class="card-subtitle mb-2 text-muted">${r.autor || 'Autor desconocido'}</h6>
-      <p class="card-text">${r.descripcion || ''}</p>
-      <button class="btn btn-info btn-sm me-2 ver-ficha" data-id="${r.id_obra}">Ver ficha</button>
-      <button class="btn btn-success btn-sm">Descargar obra</button>
-    </div>
-  `;
+  <div class="card-body">
+    <h5 class="card-title">${r.titulo}</h5>
+    <h6 class="card-subtitle mb-2 text-muted">${r.autor || 'Autor desconocido'}</h6>
+    <p class="card-text">${r.descripcion || ''}</p>
+    <button class="btn btn-info btn-sm me-2 ver-ficha" data-id="${r.id_obra}">Ver ficha</button>
+    <button class="btn btn-success btn-sm descargar-obra" data-id="${r.id_obra}">Descargar obra</button>
+  </div>
+`;
         cont.appendChild(card);
     });
 
@@ -89,6 +89,23 @@ document.getElementById("btnBuscar").addEventListener("click", async () => {
             window.electronAPI.abrirFicha(idObra);
         }
     });
+    cont.addEventListener("click", async (e) => {
+        if (e.target.classList.contains("ver-ficha")) {
+            const idObra = e.target.getAttribute("data-id");
+            window.electronAPI.abrirFicha(idObra);
+        }
+
+        if (e.target.classList.contains("descargar-obra")) {
+            const idObra = e.target.getAttribute("data-id");
+            const res = await window.electronAPI.descargarObra(idObra);
+            if (res.success) {
+                alert(`Obra descargada en: ${res.filePath}`);
+            } else {
+                alert(`Error: ${res.error}`);
+            }
+        }
+    });
+
 
 });
 

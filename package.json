@@ -21,8 +21,10 @@
     "electron": "^38.1.0"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "better-sqlite3": "^12.2.0",
     "bootstrap": "^5.3.8",
+    "pdfkit": "^0.17.2",
     "sqlite3": "^5.1.7"
   }
 }
