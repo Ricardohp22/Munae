@@ -7,9 +7,9 @@ document.getElementById("btnLogin").addEventListener("click", async () => {
   if (result.success) {
     // Guardamos el rol en localStorage para usarlo en otras pantallas
     localStorage.setItem("rol", result.rol);
-
+    //console.log(result.rol);
     // Cambiar a ventana de búsqueda
-    window.location = "busqueda.html";
+    //window.location = "busqueda.html";
   } else {
     document.getElementById("mensaje").textContent = result.error;
   }

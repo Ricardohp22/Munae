@@ -3,13 +3,60 @@ const path = require("path");
 const fs = require("fs");
 const db = require("./src/database");
 //const { globalShortcut } = require("electron");
-let currentUserRole = "admin"; // ⚡ Cambiar dinámicamente según login
+let currentUserRole = null; // ⚡ Cambiar dinámicamente según login
+
+function setMenuByRole(role, win) {
+  const template = [
+      {
+        label: "Menú",
+        submenu: [
+          {
+            label: "Busqueda",
+            click: () => {
+              win.loadFile("src/busqueda.html");
+            }
+          },
+          {
+            label: "Agregar obra",
+            click: () => {
+              if (role === "admin") {
+                console.log(role);
+                win.loadFile("src/index.html");
+              } else {
+                dialog.showMessageBox(win, {
+                  type: "warning",
+                  title: "Acceso denegado",
+                  message: "Solo los administradores pueden registrar obras."
+                });
+              }
+            }
+          }
+        ]
+      },
+      {
+        label: "Ver",
+        submenu: [
+          {
+            label: "Toggle DevTools",
+            accelerator: "Ctrl+Shift+I",
+            click: (item, focusedWindow) => {
+              if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+            }
+          }
+        ]
+      }
+
+    ];
+    const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1000,
     height: 700,
+    icon: path.join(__dirname, "assets/icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true,
@@ -19,51 +66,51 @@ const createWindow = () => {
 
   // Al iniciar siempre mostrar login
   win.loadFile("src/login.html");
-  // Crear menú personalizado
-  const template = [
-    {
-      label: "Menú",
-      submenu: [
-        {
-          label: "Busqueda",
-          click: () => {
-            win.loadFile("src/busqueda.html");
-          }
-        },
-        {
-          label: "Agregar obra",
-          click: () => {
-            if (currentUserRole === "admin") {
-              win.loadFile("src/index.html");
-            } else {
-              dialog.showMessageBox(win, {
-                type: "warning",
-                title: "Acceso denegado",
-                message: "Solo los administradores pueden registrar obras."
-              });
+
+// Crear menú personalizado
+   /*  const template = [
+      {
+        label: "Menú",
+        submenu: [
+          {
+            label: "Busqueda",
+            click: () => {
+              win.loadFile("src/busqueda.html");
+            }
+          },
+          {
+            label: "Agregar obra",
+            click: () => {
+              if (currentUserRole === "admin") {
+                win.loadFile("src/index.html");
+              } else {
+                dialog.showMessageBox(win, {
+                  type: "warning",
+                  title: "Acceso denegado",
+                  message: "Solo los administradores pueden registrar obras."
+                });
+              }
             }
           }
-        }
-      ]
-    },
-    {
-      label: "Ver",
-      submenu: [
-        {
-          label: "Toggle DevTools",
-          accelerator: "Ctrl+Shift+I",
-          click: (item, focusedWindow) => {
-            if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+        ]
+      },
+      {
+        label: "Ver",
+        submenu: [
+          {
+            label: "Toggle DevTools",
+            accelerator: "Ctrl+Shift+I",
+            click: (item, focusedWindow) => {
+              if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+            }
           }
-        }
-      ]
-    }
+        ]
+      }
 
-  ];
+    ];
 
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu); */
   // Guardamos una referencia para usarla en otros IPC
   global.mainWindow = win;
 };
@@ -320,6 +367,9 @@ ipcMain.handle("login", async (event, usuario, password) => {
         resolve({ success: false, error: "Usuario no encontrado" });
       } else {
         if (row.password === password) { // ⚠️ luego cambiamos a bcrypt
+          currentUserRole = row.rol; 
+          console.log(currentUserRole);
+          setMenuByRole(currentUserRole, global.mainWindow);
           // Según el rol, cargar búsqueda
           cargarBusqueda();
           resolve({ success: true, rol: row.rol });
@@ -746,6 +796,76 @@ ipcMain.on("topografica-agregada", () => {
   }
 });
 
+// Insertar ubicaciones topológicas
+ipcMain.handle("insert-ubicacion-topologica", async (event, data) => {
+  const { tipo, ubicaciones } = data; // ubicaciones = array de strings
+  return new Promise((resolve) => {
+    // 1. Insertar/validar tipo
+    const sqlTipo = `INSERT OR IGNORE INTO tipo_ubicaciones_topologicas (tipo) VALUES (?)`;
+    db.run(sqlTipo, [tipo], function (err) {
+      if (err) return resolve({ success: false, error: "Error en tipo" });
+
+      // Recuperar id_tipo (sea recién insertado o existente)
+      db.get(
+        `SELECT id_tipo_ubicacion_topologica FROM tipo_ubicaciones_topologicas WHERE tipo = ?`,
+        [tipo],
+        (err2, row) => {
+          if (err2 || !row)
+            return resolve({ success: false, error: "No se pudo obtener el tipo" });
+
+          const idTipo = row.id_tipo_ubicacion_topologica;
+
+          // 2. Insertar ubicaciones (evitar duplicados)
+          let pendientes = ubicaciones.length;
+          let errores = false;
+
+          ubicaciones.forEach((u) => {
+            const sqlCheck = `SELECT COUNT(*) as count 
+                              FROM ubicaciones_topologicas 
+                              WHERE id_tipo_ubicacion_topologica = ? AND ubicacion = ?`;
+            db.get(sqlCheck, [idTipo, u.trim()], (err3, row2) => {
+              if (err3) errores = true;
+              if (row2.count === 0) {
+                db.run(
+                  `INSERT INTO ubicaciones_topologicas (id_tipo_ubicacion_topologica, ubicacion) VALUES (?, ?)`,
+                  [idTipo, u.trim()]
+                );
+              }
+              pendientes--;
+              if (pendientes === 0) {
+                if (errores) resolve({ success: false, error: "Error insertando ubicaciones" });
+                else resolve({ success: true });
+              }
+            });
+          });
+        }
+      );
+    });
+  });
+});
+
+// Abrir ventana para agregar ubicaciones topológicas
+ipcMain.on("abrir-agregar-ubicacion-topologica", (event) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const modal = new BrowserWindow({
+    width: 500,
+    height: 400,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true,
+    },
+  });
+  modal.loadFile("src/agregarUbicacionTopologica.html");
+});
+
+// Notificar a renderer que hubo un cambio
+ipcMain.on("ubicacion-topologica-agregada", () => {
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send("ubicacion-topologica-agregada");
+  }
+});
 
 
 

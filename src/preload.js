@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 console.log("preload.js");
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  notificarUbicacionTopologicaAgregada: () => ipcRenderer.send("ubicacion-topologica-agregada"),
+  onUbicacionTopologicaAgregada: (callback) => ipcRenderer.on("ubicacion-topologica-agregada", callback),
+  abrirAgregarUbicacionTopologica: () => ipcRenderer.send("abrir-agregar-ubicacion-topologica"),
+  insertUbicacionTopologica: (data) => ipcRenderer.invoke("insert-ubicacion-topologica", data),
   // Ubicaciones Topográficas
   notificarTopograficaAgregada: () => ipcRenderer.send("topografica-agregada"),
   onTopograficaAgregada: (callback) => ipcRenderer.on("topografica-agregada", callback),

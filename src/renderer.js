@@ -193,7 +193,9 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
   console.log(datos);
   const errores = validarFormulario(datos);
   if (errores.length) {
-    alert("Errores:\n" + errores.join("\n"));
+    //alert("Errores:\n" + errores.join("\n"));
+    mostrarMensaje("Errores:\n " + errores.join("\n"), "error");
+
     return;
   } else {
     console.log('datos validados:', datos);
@@ -202,12 +204,12 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
   // Enviar a main.js
   const resultado = await window.electronAPI.guardarObra(datos);
   if (resultado.success) {
-    alert("¡Registro exitoso!");
+    mostrarMensaje("¡Registro exitoso!", "exito");
     document.getElementById("form-obra").reset();
     imgsBaja = []; imgsAlta = [];
     renderAllLists();
   } else {
-    alert("Error al guardar la obra:\n" + resultado.error);
+    mostrarMensaje("Error al guardar la obra: " + resultado.error, "error");
     //console.log(resultado.error);
   }
 });
@@ -296,8 +298,48 @@ window.electronAPI.onTopograficaAgregada(async () => {
   populateSelect(selTopografica, topograficas, "id_ubicacion_topografica", "ubicacion", "Seleccione una ubicación");
 });
 
+window.electronAPI.onUbicacionTopologicaAgregada(async () => {
+  console.log("Refrescando ubicaciones topológicas");
 
+  // Recargar todos los tipos
+  const tiposTop = await window.electronAPI.getTiposTopologicos();
 
+  const selTipoGeneral = document.getElementById("ubi_general_tipo");
+  const selTipoSub = document.getElementById("ubi_sub_tipo");
+  const selTipoSub2 = document.getElementById("ubi_sub2_tipo");
+
+  // Usamos la misma función que ya tienes para rellenar selects
+  populateSelect(selTipoGeneral, tiposTop, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Almacén general)');
+  populateSelect(selTipoSub, tiposTop, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión)');
+  populateSelect(selTipoSub2, tiposTop, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión 2)');
+
+  // ⚡ Además, limpiar los selects de ubicaciones dependientes
+  const selUbiGeneral = document.getElementById("ubi_general");
+  const selUbiSub = document.getElementById("ubi_sub");
+  const selUbiSub2 = document.getElementById("ubi_sub2");
+
+  populateSelectWithPlaceholder(selUbiGeneral, "Seleccione tipo primero");
+  populateSelectWithPlaceholder(selUbiSub, "Seleccione tipo primero");
+  populateSelectWithPlaceholder(selUbiSub2, "Seleccione tipo primero");
+
+  selUbiGeneral.disabled = true;
+  selUbiSub.disabled = true;
+  selUbiSub2.disabled = true;
+});
+
+function mostrarMensaje(texto, tipo = "exito") {
+  const mensajeDiv = document.getElementById("mensaje");
+  mensajeDiv.textContent = texto;
+
+  // Resetear clases
+  mensajeDiv.className = "mt-3";
+
+  if (tipo === "exito") {
+    mensajeDiv.classList.add("text-success", "fw-bold");
+  } else if (tipo === "error") {
+    mensajeDiv.classList.add("text-danger", "fw-bold");
+  }
+}
 
 
 // Llama render inicial para mostrar "Sin imágenes"
