@@ -18,7 +18,8 @@
   },
   "homepage": "https://github.com/Ricardohp22/Munae#readme",
   "devDependencies": {
-    "electron": "^38.1.0"
+    "electron": "^38.1.0",
+    "electron-builder": "^26.0.12"
   },
   "dependencies": {
     "archiver": "^7.0.1",
