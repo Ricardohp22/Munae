@@ -11,16 +11,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   notificarTopograficaAgregada: () => ipcRenderer.send("topografica-agregada"),
   onTopograficaAgregada: (callback) => ipcRenderer.on("topografica-agregada", callback),
   abrirAgregarTopografica: () => ipcRenderer.send("abrir-agregar-topografica"),
+  abrirEditarTopografica: (idTopografica) => ipcRenderer.send("abrir-editar-topografica", idTopografica),
   insertTopografica: (ubicacion) => ipcRenderer.invoke("insert-topografica", ubicacion),
   // Técnicas
   notificarTecnicaAgregada: () => ipcRenderer.send("tecnica-agregada"),
   onTecnicaAgregada: (callback) => ipcRenderer.on("tecnica-agregada", callback),
   abrirAgregarTecnica: () => ipcRenderer.send("abrir-agregar-tecnica"),
+  abrirEditarTecnica: (idTecnica) => ipcRenderer.send("abrir-editar-tecnica", idTecnica),
   insertTecnica: (tecnica) => ipcRenderer.invoke("insert-tecnica", tecnica),
   //artistas
   notificarArtistaAgregado: () => ipcRenderer.send("artista-agregado"),
   onArtistaAgregado: (callback) => ipcRenderer.on("artista-agregado", callback),
   abrirAgregarArtista: () => ipcRenderer.send("abrir-agregar-artista"),
+  abrirEditarArtista: (idArtista) => ipcRenderer.send("abrir-editar-artista", idArtista),
   insertArtista: (artista) => ipcRenderer.invoke("insert-artista", artista),
   eliminarArtista: (idArtista) => ipcRenderer.send("eliminar-artista", idArtista),
   eliminarTipoTopologico: (idTipo) => ipcRenderer.send("eliminar-tipo-topologico", idTipo),
@@ -51,5 +54,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getTecnicas: () => ipcRenderer.invoke('get-tecnicas'),
   getTiposTopologicos: () => ipcRenderer.invoke('get-tipos-topologicos'),
   getUbicacionesTopologicasPorTipo: (id_tipo) => ipcRenderer.invoke('get-ubicaciones-topologicas-por-tipo', id_tipo),
-  getUbicacionesTopograficas: () => ipcRenderer.invoke('get-ubicaciones-topograficas')
+  getUbicacionesTopograficas: () => ipcRenderer.invoke('get-ubicaciones-topograficas'),
+  // Métodos para obtener datos para editar
+  getArtista: (idArtista) => ipcRenderer.invoke('get-artista', idArtista),
+  getTecnica: (idTecnica) => ipcRenderer.invoke('get-tecnica', idTecnica),
+  getTopografica: (idTopografica) => ipcRenderer.invoke('get-topografica', idTopografica),
+  // Métodos para actualizar
+  updateArtista: (idArtista, datos) => ipcRenderer.invoke('update-artista', idArtista, datos),
+  updateTecnica: (idTecnica, tecnica) => ipcRenderer.invoke('update-tecnica', idTecnica, tecnica),
+  updateTopografica: (idTopografica, ubicacion) => ipcRenderer.invoke('update-topografica', idTopografica, ubicacion),
+  // Listeners para recibir datos al editar
+  onCargarDatosArtista: (callback) => ipcRenderer.on('cargar-datos-artista', (event, id, datos) => callback(event, id, datos)),
+  onCargarDatosTecnica: (callback) => ipcRenderer.on('cargar-datos-tecnica', (event, id, datos) => callback(event, id, datos)),
+  onCargarDatosTopografica: (callback) => ipcRenderer.on('cargar-datos-topografica', (event, id, datos) => callback(event, id, datos))
 });

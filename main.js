@@ -709,6 +709,79 @@ ipcMain.on("abrir-agregar-artista", (event) => {
   });
   modal.loadFile("src/agregarArtista.html");
 });
+
+// Abrir ventana para editar artista
+ipcMain.on("abrir-editar-artista", async (event, idArtista) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const artistaId = Number(idArtista);
+
+  if (!Number.isInteger(artistaId) || artistaId <= 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar artista",
+      message: "Seleccione un artista válido para editar."
+    });
+    return;
+  }
+
+  // Obtener datos del artista
+  const artista = await allAsync(
+    "SELECT nombre, apellido_paterno, apellido_materno FROM artistas WHERE id_artista = ?",
+    [artistaId]
+  );
+
+  if (!artista || artista.length === 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar artista",
+      message: "El artista seleccionado no existe."
+    });
+    return;
+  }
+
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 400,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/editarArtista.html");
+
+  modal.webContents.once("did-finish-load", () => {
+    modal.webContents.send("cargar-datos-artista", artistaId, artista[0]);
+  });
+});
+
+// Actualizar artista
+ipcMain.handle("update-artista", async (event, idArtista, datos) => {
+  return new Promise((resolve) => {
+    const { nombre, apellido_paterno, apellido_materno } = datos;
+
+    // Verificar que no exista otro artista con los mismos datos (excepto el actual)
+    const sqlCheck = `SELECT COUNT(*) as count FROM artistas 
+                      WHERE nombre = ? AND apellido_paterno = ? AND apellido_materno = ?
+                      AND id_artista != ?`;
+    db.get(sqlCheck, [nombre, apellido_paterno, apellido_materno, idArtista], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "Ya existe otro artista con estos datos." });
+      }
+
+      const sqlUpdate = `UPDATE artistas 
+                         SET nombre = ?, apellido_paterno = ?, apellido_materno = ?
+                         WHERE id_artista = ?`;
+      db.run(sqlUpdate, [nombre, apellido_paterno, apellido_materno, idArtista], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al actualizar" });
+        resolve({ success: true });
+      });
+    });
+  });
+});
+
 //Eliminar artista
 ipcMain.on("eliminar-artista", (event, idArtista) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -883,6 +956,72 @@ ipcMain.on("abrir-agregar-tecnica", (event) => {
   modal.loadFile("src/agregarTecnica.html");
 });
 
+// Abrir ventana para editar técnica
+ipcMain.on("abrir-editar-tecnica", async (event, idTecnica) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const tecnicaId = Number(idTecnica);
+
+  if (!Number.isInteger(tecnicaId) || tecnicaId <= 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar técnica",
+      message: "Seleccione una técnica válida para editar."
+    });
+    return;
+  }
+
+  // Obtener datos de la técnica
+  const tecnica = await allAsync(
+    "SELECT tecnica FROM tecnicas WHERE id_tecnica = ?",
+    [tecnicaId]
+  );
+
+  if (!tecnica || tecnica.length === 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar técnica",
+      message: "La técnica seleccionada no existe."
+    });
+    return;
+  }
+
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/editarTecnica.html");
+
+  modal.webContents.once("did-finish-load", () => {
+    modal.webContents.send("cargar-datos-tecnica", tecnicaId, tecnica[0]);
+  });
+});
+
+// Actualizar técnica
+ipcMain.handle("update-tecnica", async (event, idTecnica, tecnica) => {
+  return new Promise((resolve) => {
+    // Verificar que no exista otra técnica con el mismo nombre (excepto la actual)
+    const sqlCheck = `SELECT COUNT(*) as count FROM tecnicas WHERE tecnica = ? AND id_tecnica != ?`;
+    db.get(sqlCheck, [tecnica, idTecnica], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "Ya existe otra técnica con este nombre." });
+      }
+
+      const sqlUpdate = `UPDATE tecnicas SET tecnica = ? WHERE id_tecnica = ?`;
+      db.run(sqlUpdate, [tecnica, idTecnica], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al actualizar" });
+        resolve({ success: true });
+      });
+    });
+  });
+});
+
 ipcMain.on("tecnica-agregada", () => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send("tecnica-agregada");
@@ -1036,6 +1175,72 @@ ipcMain.on("abrir-agregar-topografica", (event) => {
     }
   });
   modal.loadFile("src/agregarTopografica.html");
+});
+
+// Abrir ventana para editar ubicación topográfica
+ipcMain.on("abrir-editar-topografica", async (event, idTopografica) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const topograficaId = Number(idTopografica);
+
+  if (!Number.isInteger(topograficaId) || topograficaId <= 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar ubicación topográfica",
+      message: "Seleccione una ubicación topográfica válida para editar."
+    });
+    return;
+  }
+
+  // Obtener datos de la ubicación topográfica
+  const topografica = await allAsync(
+    "SELECT ubicacion FROM ubicaciones_topograficas WHERE id_ubicacion_topografica = ?",
+    [topograficaId]
+  );
+
+  if (!topografica || topografica.length === 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar ubicación topográfica",
+      message: "La ubicación topográfica seleccionada no existe."
+    });
+    return;
+  }
+
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/editarTopografica.html");
+
+  modal.webContents.once("did-finish-load", () => {
+    modal.webContents.send("cargar-datos-topografica", topograficaId, topografica[0]);
+  });
+});
+
+// Actualizar ubicación topográfica
+ipcMain.handle("update-topografica", async (event, idTopografica, ubicacion) => {
+  return new Promise((resolve) => {
+    // Verificar que no exista otra ubicación topográfica con el mismo nombre (excepto la actual)
+    const sqlCheck = `SELECT COUNT(*) as count FROM ubicaciones_topograficas WHERE ubicacion = ? AND id_ubicacion_topografica != ?`;
+    db.get(sqlCheck, [ubicacion, idTopografica], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "Ya existe otra ubicación topográfica con este nombre." });
+      }
+
+      const sqlUpdate = `UPDATE ubicaciones_topograficas SET ubicacion = ? WHERE id_ubicacion_topografica = ?`;
+      db.run(sqlUpdate, [ubicacion, idTopografica], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al actualizar" });
+        resolve({ success: true });
+      });
+    });
+  });
 });
 
 ipcMain.on("topografica-agregada", () => {

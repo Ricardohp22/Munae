@@ -21,9 +21,11 @@
           <select id="id_artista" class="form-select flex-grow-1">
             <option value="">Seleccione un artista</option>
           </select>
-          <button type="button" class="btn btn-secondary"
+          <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
             onclick="window.electronAPI.abrirAgregarArtista()">Agregar</button>
-            <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
+          <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
+            onclick="editarArtista()">Editar</button>
+          <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
             onclick="eliminarArtista()">Eliminar</button>
         </div>
       </div>
@@ -60,8 +62,10 @@
           <select id="id_tecnica" class="form-select flex-grow-1">
             <option value="">Seleccione una técnica</option>
           </select>
-          <button type="button" class="btn btn-secondary"
+          <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
             onclick="window.electronAPI.abrirAgregarTecnica()">Agregar</button>
+          <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
+            onclick="editarTecnica()">Editar</button>
           <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
             onclick="eliminarTecnica()">Eliminar</button>
         </div>
@@ -117,7 +121,7 @@
           <div class="d-flex gap-2">
             <select id="ubi_general_tipo" class="form-select flex-grow-1">
             </select>
-            <button type="button" class="btn btn-secondary"
+            <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
               onclick="window.electronAPI.abrirAgregarUbicacionTopologica()">Agregar</button>
           <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
             onclick="eliminarTipoTopologico()">Eliminar</button>
@@ -169,8 +173,10 @@
           <select id="id_ubi_topografica" class="form-select flex-grow-1">
             <option value="">Seleccione una ubicación</option>
           </select>
-          <button type="button" class="btn btn-secondary"
+          <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
             onclick="window.electronAPI.abrirAgregarTopografica()">Agregar</button>
+          <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
+            onclick="editarTopografica()">Editar</button>
           <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
             onclick="eliminarTopografica()">Eliminar</button>
         </div>

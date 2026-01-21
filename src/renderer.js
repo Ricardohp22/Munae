@@ -15,9 +15,36 @@ function eliminarTecnica(){
   window.electronAPI.eliminarTecnica(tecnicas.value);
 }
 
+function editarArtista(){
+  const artistas = document.getElementById("id_artista");
+  if (!artistas.value) {
+    alert("Seleccione un artista para editar.");
+    return;
+  }
+  window.electronAPI.abrirEditarArtista(artistas.value);
+}
+
+function editarTecnica(){
+  const tecnicas = document.getElementById("id_tecnica");
+  if (!tecnicas.value) {
+    alert("Seleccione una técnica para editar.");
+    return;
+  }
+  window.electronAPI.abrirEditarTecnica(tecnicas.value);
+}
+
 function eliminarTopografica(){
   const topograficas = document.getElementById("id_ubi_topografica");
   window.electronAPI.eliminarTopografica(topograficas.value);
+}
+
+function editarTopografica(){
+  const topograficas = document.getElementById("id_ubi_topografica");
+  if (!topograficas.value) {
+    alert("Seleccione una ubicación topográfica para editar.");
+    return;
+  }
+  window.electronAPI.abrirEditarTopografica(topograficas.value);
 }
 
 function eliminarUbicacionTopologica(nivel){
