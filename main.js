@@ -446,6 +446,22 @@ ipcMain.handle("buscar-obras", async (event, filtros) => {
 
   const where = condiciones.length ? "WHERE " + condiciones.join(" AND ") : "";
 
+  // Consulta para contar el total de resultados
+  const sqlCount = `
+    SELECT COUNT(DISTINCT o.id_obra) as total
+    FROM obras o
+    JOIN artistas a ON o.id_artista = a.id_artista
+    LEFT JOIN obra_ubicaciones_topologicas otu ON o.id_obra = otu.id_obra
+    ${where}
+  `;
+
+  const countResult = await allAsync(sqlCount, params);
+  const total = countResult[0]?.total || 0;
+
+  // Consulta paginada
+  const offset = filtros.offset || 0;
+  const limit = filtros.limit || 10;
+
   const sql = `
     SELECT o.id_obra, o.titulo, o.descripcion, a.nombre || ' ' || a.apellido_paterno AS autor
     FROM obras o
@@ -454,9 +470,17 @@ ipcMain.handle("buscar-obras", async (event, filtros) => {
     ${where}
     GROUP BY o.id_obra
     ORDER BY o.titulo
+    LIMIT ? OFFSET ?
   `;
 
-  return await allAsync(sql, params);
+  const resultados = await allAsync(sql, [...params, limit, offset]);
+
+  return {
+    resultados,
+    total,
+    pagina: Math.floor(offset / limit) + 1,
+    totalPaginas: Math.ceil(total / limit)
+  };
 });
 
 // Autores

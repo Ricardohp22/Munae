@@ -63,30 +63,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 });
 
-// 🔹 Este listener ya solo pinta los resultados
-document.getElementById("btnBuscar").addEventListener("click", async () => {
-    const filtros = {
-        sigropam: document.getElementById("filtro_sigropam").value.trim(),
-        autor: document.getElementById("filtro_autor").value,
-        keyword: document.getElementById("filtro_keyword").value.trim(),
-        anio: document.getElementById("filtro_anio").value.trim(),
-        tecnica: document.getElementById("filtro_tecnica").value,
-        topologica: document.getElementById("filtro_topologica").value,
-        topografica: document.getElementById("filtro_topografica").value,
-        expo: document.getElementById("filtro_expo").value.trim()
-    };
+// Variables para paginación
+let filtrosActuales = {};
+let paginaActual = 1;
+const resultadosPorPagina = 10;
 
-    const resultados = await window.electronAPI.buscarObras(filtros);
-
+// Función para renderizar resultados
+function renderizarResultados(data) {
     const cont = document.getElementById("resultados");
-    cont.innerHTML = "";
+    const contCards = document.getElementById("resultados-cards");
+    const contNavegacion = document.getElementById("navegacion");
+    const contIndicador = document.getElementById("indicador-resultados");
 
-    if (!resultados.length) {
-        cont.innerHTML = "<p class='text-muted'>No se encontraron obras</p>";
+    // Limpiar resultados anteriores
+    contCards.innerHTML = "";
+
+    // Mostrar indicador de resultados
+    if (contIndicador) {
+        contIndicador.textContent = `Se encontraron ${data.total} obra(s) en total`;
+        contIndicador.style.display = data.total > 0 ? "block" : "none";
+    }
+
+    if (!data.resultados || data.resultados.length === 0) {
+        contCards.innerHTML = "<p class='text-muted'>No se encontraron obras</p>";
+        if (contNavegacion) contNavegacion.style.display = "none";
         return;
     }
 
-    resultados.forEach(r => {
+    // Renderizar tarjetas
+    data.resultados.forEach(r => {
         const card = document.createElement("div");
         card.className = "card mb-3";
         card.innerHTML = `
@@ -98,8 +103,87 @@ document.getElementById("btnBuscar").addEventListener("click", async () => {
             <button class="btn btn-success btn-sm descargar-obra" data-id="${r.id_obra}">Descargar obra</button>
           </div>
         `;
-        cont.appendChild(card);
+        contCards.appendChild(card);
     });
+
+    // Renderizar navegación
+    if (contNavegacion) {
+        renderizarNavegacion(data, contNavegacion);
+    }
+}
+
+// Función para renderizar controles de navegación
+function renderizarNavegacion(data, contenedor) {
+    const totalPaginas = data.totalPaginas;
+    
+    if (totalPaginas <= 1) {
+        contenedor.style.display = "none";
+        return;
+    }
+
+    contenedor.style.display = "flex";
+    contenedor.innerHTML = `
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-primary btn-sm" id="btnAnterior" ${paginaActual === 1 ? 'disabled' : ''}>
+                Anterior
+            </button>
+            <span class="text-muted">
+                Página ${data.pagina} de ${totalPaginas}
+            </span>
+            <button class="btn btn-outline-primary btn-sm" id="btnSiguiente" ${paginaActual >= totalPaginas ? 'disabled' : ''}>
+                Siguiente
+            </button>
+        </div>
+    `;
+
+    // Event listeners para navegación
+    document.getElementById("btnAnterior").addEventListener("click", () => {
+        if (paginaActual > 1) {
+            paginaActual--;
+            buscarObrasPagina();
+        }
+    });
+
+    document.getElementById("btnSiguiente").addEventListener("click", () => {
+        if (paginaActual < totalPaginas) {
+            paginaActual++;
+            buscarObrasPagina();
+        }
+    });
+}
+
+// Función para realizar búsqueda con paginación
+async function buscarObrasPagina() {
+    const offset = (paginaActual - 1) * resultadosPorPagina;
+    const filtros = {
+        ...filtrosActuales,
+        offset: offset,
+        limit: resultadosPorPagina
+    };
+
+    const data = await window.electronAPI.buscarObras(filtros);
+    renderizarResultados(data);
+}
+
+// 🔹 Este listener ya solo pinta los resultados
+document.getElementById("btnBuscar").addEventListener("click", async () => {
+    // Guardar filtros actuales
+    filtrosActuales = {
+        sigropam: document.getElementById("filtro_sigropam").value.trim(),
+        autor: document.getElementById("filtro_autor").value,
+        keyword: document.getElementById("filtro_keyword").value.trim(),
+        anio: document.getElementById("filtro_anio").value.trim(),
+        tecnica: document.getElementById("filtro_tecnica").value,
+        topologica: document.getElementById("filtro_topologica").value,
+        topografica: document.getElementById("filtro_topografica").value,
+        expo: document.getElementById("filtro_expo").value.trim()
+    };
+
+    // Resetear a página 1
+    paginaActual = 1;
+    
+    // Realizar búsqueda
+    await buscarObrasPagina();
 });
 
 

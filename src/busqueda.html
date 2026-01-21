@@ -66,7 +66,18 @@
             <button type="button" id="btnBuscar" class="btn btn-primary mt-3">Buscar</button>
         </form>
 
-        <div id="resultados" class="mt-4"></div>
+        <!-- Indicador de resultados -->
+        <div id="indicador-resultados" class="mt-4 mb-3" style="display: none;">
+            <p class="text-muted fw-bold"></p>
+        </div>
+
+        <!-- Contenedor de resultados -->
+        <div id="resultados" class="mt-4">
+            <div id="resultados-cards"></div>
+            
+            <!-- Navegación de paginación -->
+            <div id="navegacion" class="d-flex justify-content-center mt-4" style="display: none;"></div>
+        </div>
     </div>
 
     <script src="busqueda.js"></script>
