@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getTiposTopologicos: () => ipcRenderer.invoke('get-tipos-topologicos'),
   getUbicacionesTopologicasPorTipo: (id_tipo) => ipcRenderer.invoke('get-ubicaciones-topologicas-por-tipo', id_tipo),
   getUbicacionesTopograficas: () => ipcRenderer.invoke('get-ubicaciones-topograficas'),
+  getUltimaObra: () => ipcRenderer.invoke('get-ultima-obra'),
   // Métodos para obtener datos para editar
   getArtista: (idArtista) => ipcRenderer.invoke('get-artista', idArtista),
   getTecnica: (idTecnica) => ipcRenderer.invoke('get-tecnica', idTecnica),

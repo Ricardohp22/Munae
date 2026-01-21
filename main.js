@@ -57,12 +57,37 @@ const createWindow = () => {
     width: 1000,
     height: 700,
     icon: path.join(__dirname, "assets/icon.ico"),
+    backgroundColor: '#D4C19C',
+    titleBarStyle: 'default',
+    // Forzar color de barra de título en Windows (incluso en dark mode)
+    titleBarOverlay: process.platform === 'win32' ? {
+      color: '#4E232E',
+      symbolColor: '#ffffff',
+      height: 30
+    } : undefined,
+    // Deshabilitar dark mode para la ventana
+    darkTheme: false,
+    // Intentar forzar tema claro en Windows
+    ...(process.platform === 'win32' && {
+      backgroundColor: '#D4C19C',
+      frame: true,
+      autoHideMenuBar: false
+    }),
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true,
       nodeIntegration: false
     },
   });
+  
+  // Forzar tema claro y color de fondo en Windows después de crear la ventana
+  if (process.platform === 'win32') {
+    win.setBackgroundColor('#D4C19C');
+    // Intentar forzar el color de la barra de título después de que la ventana esté lista
+    win.once('ready-to-show', () => {
+      win.setBackgroundColor('#D4C19C');
+    });
+  }
 
   // Al iniciar siempre mostrar login
   win.loadFile("src/login.html");
@@ -518,6 +543,101 @@ ipcMain.handle("get-filtro-topologicas", async () => {
   return await allAsync(sql);
 });
 
+// Obtener última obra guardada para precargar formulario
+ipcMain.handle("get-ultima-obra", async () => {
+  const sql = `
+    SELECT o.id_obra,
+           o.no_sigropam,
+           o.id_artista,
+           o.titulo,
+           o.fecha,
+           o.id_tecnica,
+           o.tiraje,
+           o.medidas_soporte_ancho,
+           o.medidas_soporte_largo,
+           o.medidas_imagen_ancho,
+           o.medidas_imagen_largo,
+           o.ubi_topolo_especificacion_manual,
+           o.id_ubicacion_topografica,
+           o.observaciones,
+           o.estado_conservacion,
+           o.descripcion,
+           o.exposiciones
+    FROM obras o
+    ORDER BY o.id_obra DESC
+    LIMIT 1
+  `;
+
+  const obras = await allAsync(sql);
+  
+  if (!obras || obras.length === 0) {
+    return null;
+  }
+
+  const obra = obras[0];
+
+  // Obtener ubicaciones topológicas por nivel
+  const ubicacionesTopo = await allAsync(`
+    SELECT id_ubicacion_topologica, nivel
+    FROM obra_ubicaciones_topologicas
+    WHERE id_obra = ?
+    ORDER BY nivel
+  `, [obra.id_obra]);
+
+  // Organizar ubicaciones por nivel
+  const ubiGeneral = ubicacionesTopo.find(u => u.nivel === 1);
+  const ubiSub = ubicacionesTopo.find(u => u.nivel === 2);
+  const ubiSub2 = ubicacionesTopo.find(u => u.nivel === 3);
+
+  // Obtener el tipo de cada ubicación topológica
+  let ubiGeneralTipo = null;
+  let ubiSubTipo = null;
+  let ubiSub2Tipo = null;
+
+  if (ubiGeneral) {
+    const tipoInfo = await allAsync(`
+      SELECT id_tipo_ubicacion_topologica
+      FROM ubicaciones_topologicas
+      WHERE id_ubicacion_topologica = ?
+    `, [ubiGeneral.id_ubicacion_topologica]);
+    if (tipoInfo && tipoInfo.length > 0) {
+      ubiGeneralTipo = tipoInfo[0].id_tipo_ubicacion_topologica;
+    }
+  }
+
+  if (ubiSub) {
+    const tipoInfo = await allAsync(`
+      SELECT id_tipo_ubicacion_topologica
+      FROM ubicaciones_topologicas
+      WHERE id_ubicacion_topologica = ?
+    `, [ubiSub.id_ubicacion_topologica]);
+    if (tipoInfo && tipoInfo.length > 0) {
+      ubiSubTipo = tipoInfo[0].id_tipo_ubicacion_topologica;
+    }
+  }
+
+  if (ubiSub2) {
+    const tipoInfo = await allAsync(`
+      SELECT id_tipo_ubicacion_topologica
+      FROM ubicaciones_topologicas
+      WHERE id_ubicacion_topologica = ?
+    `, [ubiSub2.id_ubicacion_topologica]);
+    if (tipoInfo && tipoInfo.length > 0) {
+      ubiSub2Tipo = tipoInfo[0].id_tipo_ubicacion_topologica;
+    }
+  }
+
+  return {
+    ...obra,
+    ubi_general_tipo: ubiGeneralTipo,
+    ubi_general: ubiGeneral ? ubiGeneral.id_ubicacion_topologica : null,
+    ubi_sub_tipo: ubiSubTipo,
+    ubi_sub: ubiSub ? ubiSub.id_ubicacion_topologica : null,
+    ubi_sub2_tipo: ubiSub2Tipo,
+    ubi_sub2: ubiSub2 ? ubiSub2.id_ubicacion_topologica : null
+  };
+});
+
 ipcMain.handle("get-ficha-obra", async (event, idObra) => {
   const sql = `
     SELECT o.no_sigropam, 
@@ -568,6 +688,7 @@ ipcMain.on("abrir-ficha", (event, idObra) => {
     height: 600,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -726,6 +847,7 @@ ipcMain.on("abrir-agregar-artista", (event) => {
     height: 400,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -768,6 +890,7 @@ ipcMain.on("abrir-editar-artista", async (event, idArtista) => {
     height: 400,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -972,6 +1095,7 @@ ipcMain.on("abrir-agregar-tecnica", (event) => {
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -1014,6 +1138,7 @@ ipcMain.on("abrir-editar-tecnica", async (event, idTecnica) => {
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -1193,6 +1318,7 @@ ipcMain.on("abrir-agregar-topografica", (event) => {
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -1235,6 +1361,7 @@ ipcMain.on("abrir-editar-topografica", async (event, idTopografica) => {
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -1576,6 +1703,7 @@ ipcMain.on("abrir-agregar-ubicacion-topologica", (event) => {
     height: 400,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true,
@@ -1618,6 +1746,7 @@ ipcMain.on("abrir-agregar-ubicacion-topologica-individual", async (event, idTipo
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -1686,6 +1815,7 @@ ipcMain.on("abrir-editar-ubicacion-topologica-individual", async (event, idUbica
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true
@@ -1766,6 +1896,7 @@ ipcMain.on("abrir-editar-tipo-topologico", async (event, idTipo) => {
     height: 300,
     parent: parentWin,
     modal: true,
+    backgroundColor: '#D4C19C',
     webPreferences: {
       preload: path.join(__dirname, "src/preload.js"),
       contextIsolation: true

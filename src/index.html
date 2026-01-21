@@ -6,6 +6,124 @@
   <meta charset="UTF-8">
   <title>MUNAE - Registro de Obras</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #D4C19C;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      color: #621132;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    h4, .form-label, legend {
+      color: #621132;
+      font-weight: 600;
+    }
+    .form-label {
+      margin-bottom: 0.5rem;
+    }
+    .form-control, .form-select {
+      border: 2px solid #c9a982;
+      border-radius: 8px;
+      padding: 0.6rem;
+      transition: all 0.3s ease;
+      background-color: white;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #9D2449;
+      box-shadow: 0 0 0 0.2rem rgba(157, 36, 73, 0.25);
+      outline: none;
+    }
+    fieldset {
+      border: 2px solid #c9a982;
+      border-radius: 10px;
+      padding: 1.5rem;
+      background-color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 1.5rem;
+    }
+    legend {
+      padding: 0 1rem;
+      font-size: 1.1rem;
+    }
+    .btn {
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    #btnGuardar {
+      background-color: #9D2449;
+      border-color: #9D2449;
+      color: white;
+      font-size: 1.1rem;
+      padding: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    #btnGuardar:hover {
+      background-color: #7a1c38;
+      border-color: #7a1c38;
+    }
+    .list-group-item {
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      border: 1px solid #c9a982;
+    }
+    #mensaje {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    /* Botones de acción con colores pastel */
+    .btn[style*="#a5d6a7"] {
+      background-color: #a5d6a7 !important;
+      border-color: #a5d6a7 !important;
+      color: #1b5e20 !important;
+      font-weight: 600;
+    }
+    .btn[style*="#a5d6a7"]:hover {
+      background-color: #81c784 !important;
+      border-color: #81c784 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    .btn[style*="#fff9c4"] {
+      background-color: #fff9c4 !important;
+      border-color: #fff9c4 !important;
+      color: #f57f17 !important;
+      font-weight: 600;
+    }
+    .btn[style*="#fff9c4"]:hover {
+      background-color: #fff59d !important;
+      border-color: #fff59d !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    .btn[style*="#f8a5a5"] {
+      background-color: #f8a5a5 !important;
+      border-color: #f8a5a5 !important;
+      color: #721c24 !important;
+      font-weight: 600;
+    }
+    .btn[style*="#f8a5a5"]:hover {
+      background-color: #f48fb1 !important;
+      border-color: #f48fb1 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+  </style>
 </head>
 
 <body class="p-4">
@@ -14,9 +132,21 @@
     <p><small><span class="text-danger">*</span> Campos obligatorios</small></p>
 
     <form id="form-obra">
-      <!-- Artista -->
+      <!-- 1. Título de la obra -->
       <div class="mb-3">
-        <label for="id_artista" class="form-label">Artista <span class="text-danger">*</span></label>
+        <label for="titulo" class="form-label">1. Título de la obra <span class="text-danger">*</span></label>
+        <input type="text" id="titulo" class="form-control" maxlength="100">
+      </div>
+
+      <!-- 2. No. Sigropam -->
+      <div class="mb-3">
+        <label for="sigropam" class="form-label">2. No. Sigropam <span class="text-danger">*</span></label>
+        <input type="text" id="sigropam" class="form-control" maxlength="100">
+      </div>
+
+      <!-- 3. Artista -->
+      <div class="mb-3">
+        <label for="id_artista" class="form-label">3. Artista <span class="text-danger">*</span></label>
         <div class="d-flex gap-2">
           <select id="id_artista" class="form-select flex-grow-1">
             <option value="">Seleccione un artista</option>
@@ -30,90 +160,15 @@
         </div>
       </div>
 
-
-      <!-- Sigropam -->
+      <!-- 4. Año -->
       <div class="mb-3">
-        <label for="sigropam" class="form-label">No. Sigropam <span class="text-danger">*</span></label>
-        <input type="text" id="sigropam" class="form-control" maxlength="100">
-      </div>
-
-      <!-- Título -->
-      <div class="mb-3">
-        <label for="titulo" class="form-label">Título de la obra <span class="text-danger">*</span></label>
-        <input type="text" id="titulo" class="form-control" maxlength="100">
-      </div>
-
-      <!-- Descripción -->
-      <div class="mb-3">
-        <label for="descripcion" class="form-label">Descripción</label>
-        <input type="text" id="descripcion" class="form-control" maxlength="200">
-      </div>
-
-      <!-- Año -->
-      <div class="mb-3">
-        <label for="fecha" class="form-label">Año <span class="text-danger">*</span></label>
+        <label for="fecha" class="form-label">4. Año <span class="text-danger">*</span></label>
         <input type="number" id="fecha" class="form-control" min="0" max="9999">
       </div>
 
-      <!-- Técnica -->
-      <div class="mb-3">
-        <label for="id_tecnica" class="form-label">Técnica</label>
-        <div class="d-flex gap-2">
-          <select id="id_tecnica" class="form-select flex-grow-1">
-            <option value="">Seleccione una técnica</option>
-          </select>
-          <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
-            onclick="window.electronAPI.abrirAgregarTecnica()">Agregar</button>
-          <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
-            onclick="editarTecnica()">Editar</button>
-          <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
-            onclick="eliminarTecnica()">Eliminar</button>
-        </div>
-      </div>
-
-
-
-
-
-      <!-- Tiraje -->
-      <div class="mb-3">
-        <label for="tiraje" class="form-label">Tiraje</label>
-        <input type="text" id="tiraje" class="form-control" maxlength="50">
-      </div>
-
-      <!-- Dimensiones soporte -->
+      <!-- 5. Ubicación Topológica -->
       <fieldset class="border p-3 mb-3">
-        <legend class="w-auto">Dimensiones Soporte (cm)</legend>
-        <div class="row">
-          <div class="col">
-            <label for="soporte_ancho" class="form-label">Ancho</label>
-            <input type="number" id="soporte_ancho" class="form-control" min="0">
-          </div>
-          <div class="col">
-            <label for="soporte_largo" class="form-label">Alto</label>
-            <input type="number" id="soporte_largo" class="form-control" min="0">
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- Dimensiones imagen -->
-      <fieldset class="border p-3 mb-3">
-        <legend class="w-auto">Dimensiones Imagen (cm)</legend>
-        <div class="row">
-          <div class="col">
-            <label for="imagen_ancho" class="form-label">Ancho</label>
-            <input type="number" id="imagen_ancho" class="form-control" min="0">
-          </div>
-          <div class="col">
-            <label for="imagen_largo" class="form-label">Alto</label>
-            <input type="number" id="imagen_largo" class="form-control" min="0">
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- Ubicaciones topológicas -->
-      <fieldset class="border p-3 mb-3">
-        <legend class="w-auto">Ubicación Topológica</legend>
+        <legend class="w-auto">5. Ubicación Topológica</legend>
 
         <!-- Almacen general -->
         <div class="mb-3">
@@ -139,8 +194,6 @@
               onclick="eliminarUbicacionTopologica('general')">Eliminar</button>
           </div>
         </div>
-
-
 
         <!-- Subdivisión -->
         <div class="mb-3">
@@ -171,10 +224,31 @@
         </div>
       </fieldset>
 
-      <!-- Ubicación topográfica -->
-      <!-- Ubicación topográfica -->
+      <!-- 6. Descripción -->
       <div class="mb-3">
-        <label for="id_ubi_topografica" class="form-label">Ubicación Topográfica</label>
+        <label for="descripcion" class="form-label">6. Descripción</label>
+        <input type="text" id="descripcion" class="form-control" maxlength="200">
+      </div>
+
+      <!-- 7. Técnica -->
+      <div class="mb-3">
+        <label for="id_tecnica" class="form-label">7. Técnica</label>
+        <div class="d-flex gap-2">
+          <select id="id_tecnica" class="form-select flex-grow-1">
+            <option value="">Seleccione una técnica</option>
+          </select>
+          <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
+            onclick="window.electronAPI.abrirAgregarTecnica()">Agregar</button>
+          <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
+            onclick="editarTecnica()">Editar</button>
+          <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
+            onclick="eliminarTecnica()">Eliminar</button>
+        </div>
+      </div>
+
+      <!-- 8. Ubicación Topográfica -->
+      <div class="mb-3">
+        <label for="id_ubi_topografica" class="form-label">8. Ubicación Topográfica</label>
         <div class="d-flex gap-2">
           <select id="id_ubi_topografica" class="form-select flex-grow-1">
             <option value="">Seleccione una ubicación</option>
@@ -188,27 +262,63 @@
         </div>
       </div>
 
-
-      <!-- Otros campos -->
+      <!-- 9. Tiraje -->
       <div class="mb-3">
-        <label for="observaciones" class="form-label">Observaciones</label>
-        <input type="text" id="observaciones" class="form-control" maxlength="200">
+        <label for="tiraje" class="form-label">9. Tiraje</label>
+        <input type="text" id="tiraje" class="form-control" maxlength="50">
       </div>
 
+      <!-- 10. Estado de conservación -->
       <div class="mb-3">
-        <label for="estado_conservacion" class="form-label">Estado de conservación</label>
+        <label for="estado_conservacion" class="form-label">10. Estado de conservación</label>
         <input type="text" id="estado_conservacion" class="form-control" maxlength="50">
       </div>
 
+      <!-- 11. Exposiciones -->
       <div class="mb-3">
-        <label for="exposiciones" class="form-label">Exposiciones</label>
+        <label for="exposiciones" class="form-label">11. Exposiciones</label>
         <input type="text" id="exposiciones" class="form-control" maxlength="100">
       </div>
 
-      <!-- Imágenes -->
-      <!-- Imágenes BAJA resolución -->
+      <!-- 12. Dimensiones Soporte -->
+      <fieldset class="border p-3 mb-3">
+        <legend class="w-auto">12. Dimensiones Soporte (cm)</legend>
+        <div class="row">
+          <div class="col">
+            <label for="soporte_ancho" class="form-label">Ancho</label>
+            <input type="number" id="soporte_ancho" class="form-control" min="0">
+          </div>
+          <div class="col">
+            <label for="soporte_largo" class="form-label">Alto</label>
+            <input type="number" id="soporte_largo" class="form-control" min="0">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 13. Dimensiones Imagen -->
+      <fieldset class="border p-3 mb-3">
+        <legend class="w-auto">13. Dimensiones Imagen (cm)</legend>
+        <div class="row">
+          <div class="col">
+            <label for="imagen_ancho" class="form-label">Ancho</label>
+            <input type="number" id="imagen_ancho" class="form-control" min="0">
+          </div>
+          <div class="col">
+            <label for="imagen_largo" class="form-label">Alto</label>
+            <input type="number" id="imagen_largo" class="form-control" min="0">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 14. Observaciones -->
       <div class="mb-3">
-        <label class="form-label">Imágenes baja resolución</label>
+        <label for="observaciones" class="form-label">14. Observaciones</label>
+        <input type="text" id="observaciones" class="form-control" maxlength="200">
+      </div>
+
+      <!-- 15. Imágenes BAJA resolución -->
+      <div class="mb-3">
+        <label class="form-label">15. Imágenes baja resolución</label>
         <div class="d-flex gap-2 mb-2">
           <button type="button" id="btnAddBaja" class="btn btn-secondary">Agregar (hasta 4)</button>
           <span class="text-muted" id="bajaCount">(0/4)</span>
@@ -216,9 +326,9 @@
         <ul id="listBaja" class="list-group small"></ul>
       </div>
 
-      <!-- Imágenes ALTA resolución -->
+      <!-- 16. Imágenes ALTA resolución -->
       <div class="mb-3">
-        <label class="form-label">Imágenes alta resolución</label>
+        <label class="form-label">16. Imágenes alta resolución</label>
         <div class="d-flex gap-2 mb-2">
           <button type="button" id="btnAddAlta" class="btn btn-secondary">Agregar (hasta 4)</button>
           <span class="text-muted" id="altaCount">(0/4)</span>
@@ -226,17 +336,14 @@
         <ul id="listAlta" class="list-group small"></ul>
       </div>
 
-
-
       <!-- Botón -->
-      <button id="btnGuardar" type="button" class="btn btn-primary w-100">Guardar Obra</button>
+      <button id="btnGuardar" type="button" class="btn w-100">Guardar Obra</button>
     </form>
 
     <!-- Mensajes -->
     <div id="mensaje" class="mt-3"></div>
 
   </div>
-
 
   <script src="renderer.js"></script>
 </body>

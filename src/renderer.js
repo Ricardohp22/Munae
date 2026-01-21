@@ -227,6 +227,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     selUbiSub.disabled = true;
     selUbiSub2.disabled = true;
 
+    // Función para precargar formulario con última obra
+    window.precargarUltimaObra = async function() {
+      try {
+        const ultimaObra = await window.electronAPI.getUltimaObra();
+        if (!ultimaObra) return;
+
+        // Obtener datos actualizados de selects (solo los necesarios)
+        const [artistasActualizados, tecnicasActualizadas, topograficasActualizadas] = await Promise.all([
+          window.electronAPI.getArtistas(),
+          window.electronAPI.getTecnicas(),
+          window.electronAPI.getUbicacionesTopograficas()
+        ]);
+
+        // Precargar solo: Artista, Técnica, Tiraje, Ubicación topográfica, Estado de conservación
+        if (ultimaObra.id_artista) {
+          const exists = artistasActualizados.some(a => String(a.id_artista) === String(ultimaObra.id_artista));
+          if (exists) selArtista.value = ultimaObra.id_artista;
+        }
+        if (ultimaObra.id_tecnica) {
+          const exists = tecnicasActualizadas.some(t => String(t.id_tecnica) === String(ultimaObra.id_tecnica));
+          if (exists) selTecnica.value = ultimaObra.id_tecnica;
+        }
+        if (ultimaObra.tiraje) {
+          document.getElementById('tiraje').value = ultimaObra.tiraje;
+        }
+        if (ultimaObra.id_ubicacion_topografica) {
+          const exists = topograficasActualizadas.some(t => String(t.id_ubicacion_topografica) === String(ultimaObra.id_ubicacion_topografica));
+          if (exists) selTopografica.value = ultimaObra.id_ubicacion_topografica;
+        }
+        if (ultimaObra.estado_conservacion) {
+          document.getElementById('estado_conservacion').value = ultimaObra.estado_conservacion;
+        }
+      } catch (err) {
+        console.error('Error precargando última obra:', err);
+      }
+    };
+
+    // Precargar con última obra guardada al inicio
+    await window.precargarUltimaObra();
+
   } catch (err) {
     console.error('Error inicializando selects:', err);
   }
@@ -308,6 +348,10 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
     document.getElementById("form-obra").reset();
     imgsBaja = []; imgsAlta = [];
     renderAllLists();
+    // Precargar con la última obra guardada (que acabamos de guardar)
+    if (window.precargarUltimaObra) {
+      await window.precargarUltimaObra();
+    }
   } else {
     mostrarMensaje("Error al guardar la obra: " + resultado.error, "error");
     //console.log(resultado.error);
