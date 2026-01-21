@@ -10,6 +10,7 @@
         body {
             background-color: #D4C19C;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease;
         }
         .container {
             background-color: rgba(255, 255, 255, 0.7);
@@ -103,6 +104,19 @@
         }
         .btn-outline-primary:disabled {
             opacity: 0.5;
+        }
+        .btn-danger {
+            background-color: #f8a5a5;
+            border-color: #f8a5a5;
+            color: #721c24;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-danger:hover {
+            background-color: #f48fb1;
+            border-color: #f48fb1;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>

@@ -1,7 +1,18 @@
 /* document.getElementById("btnRegistro").addEventListener("click", async () => {
   await window.electronAPI.abrirRegistro();
 }); */
+
+// Variable para almacenar el rol del usuario
+let userRole = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
+    // Obtener rol del usuario
+    userRole = await window.electronAPI.getUserRole();
+    
+    // Cambiar background del body si es admin
+    if (userRole === "admin") {
+        document.body.style.backgroundColor = "#4E232E";
+    }
     // 🔹 Poblar selects igual que ahora ...
     // Autor
     const autores = await window.electronAPI.getFiltroArtistas();
@@ -94,16 +105,46 @@ function renderizarResultados(data) {
     data.resultados.forEach(r => {
         const card = document.createElement("div");
         card.className = "card mb-3";
+        
+        // Botón eliminar solo si es admin
+        const botonEliminar = userRole === "admin" 
+            ? `<button class="btn btn-danger btn-sm me-2 eliminar-obra" data-id="${r.id_obra}" title="Eliminar obra">
+                <span>🗑️</span> Eliminar
+               </button>`
+            : "";
+        
         card.innerHTML = `
           <div class="card-body">
             <h5 class="card-title">${r.titulo}</h5>
             <h6 class="card-subtitle mb-2 text-muted">${r.autor || 'Autor desconocido'}</h6>
             <p class="card-text">${r.descripcion || ''}</p>
-            <button class="btn btn-info btn-sm me-2 ver-ficha" data-id="${r.id_obra}">Ver ficha</button>
-            <button class="btn btn-success btn-sm descargar-obra" data-id="${r.id_obra}">Descargar obra</button>
+            <div class="d-flex gap-2 justify-content-between">
+              <div class="d-flex gap-2">
+                <button class="btn btn-info btn-sm ver-ficha" data-id="${r.id_obra}">Ver ficha</button>
+                <button class="btn btn-success btn-sm descargar-obra" data-id="${r.id_obra}">Descargar obra</button>
+              </div>
+              ${botonEliminar ? `<div>${botonEliminar}</div>` : ''}
+            </div>
           </div>
         `;
         contCards.appendChild(card);
+    });
+    
+    // Agregar event listeners para botones de eliminar
+    document.querySelectorAll(".eliminar-obra").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            const idObra = e.target.closest(".eliminar-obra").getAttribute("data-id");
+            if (confirm("¿Está seguro de que desea eliminar esta obra? Esta acción no se puede deshacer.")) {
+                const resultado = await window.electronAPI.eliminarObra(idObra);
+                if (resultado.success) {
+                    alert("Obra eliminada exitosamente");
+                    // Recargar resultados
+                    buscarObrasPagina();
+                } else {
+                    alert("Error al eliminar la obra: " + resultado.error);
+                }
+            }
+        });
     });
 
     // Renderizar navegación

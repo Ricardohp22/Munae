@@ -128,6 +128,16 @@ function populateSelect(sel, rows, valueKey, textFn, placeholder = 'Seleccione..
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("DOMContentLoaded");
+  
+  // Obtener rol del usuario y cambiar background si es admin
+  try {
+    const userRole = await window.electronAPI.getUserRole();
+    if (userRole === "admin") {
+      document.body.style.backgroundColor = "#4E232E";
+    }
+  } catch (err) {
+    console.error("Error obteniendo rol de usuario:", err);
+  }
   try {
     // selects del DOM (asegúrate de que tengan estos ids en tu HTML)
     const selArtista = document.getElementById('id_artista');
@@ -403,6 +413,7 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
   // Enviar a main.js
   const resultado = await window.electronAPI.guardarObra(datos);
   if (resultado.success) {
+    alert("Obra guardada exitosamente");
     mostrarMensaje("¡Registro exitoso!", "exito");
     document.getElementById("form-obra").reset();
     imgsBaja = []; imgsAlta = [];
@@ -414,6 +425,7 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
       await window.precargarUltimaObra();
     }
   } else {
+    alert("Error al guardar la obra");
     mostrarMensaje("Error al guardar la obra: " + resultado.error, "error");
     //console.log(resultado.error);
   }

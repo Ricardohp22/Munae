@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   eliminarUbicacionTopologica: (idUbicacionTopologica) => ipcRenderer.send("eliminar-ubicacion-topologica", idUbicacionTopologica),
   //Roles de usuario
   setUserRole: (role) => ipcRenderer.send("set-user-role", role),
+  getUserRole: () => ipcRenderer.invoke("get-user-role"),
+  eliminarObra: (idObra) => ipcRenderer.invoke("eliminar-obra", idObra),
   descargarObra: (idObra) => ipcRenderer.invoke("descargar-obra", idObra),
   getImagenesCarpeta: (folderPath) => ipcRenderer.invoke("get-imagenes-carpeta", folderPath),
   //API para ficha

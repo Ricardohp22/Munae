@@ -30,6 +30,25 @@ function setMenuByRole(role, win) {
                 });
               }
             }
+          },
+          {
+            type: "separator"
+          },
+          {
+            label: "Cerrar sesión",
+            click: () => {
+              currentUserRole = null;
+              // Limpiar localStorage
+              win.webContents.executeJavaScript('localStorage.clear();');
+              // Recargar completamente la página de login
+              win.loadFile("src/login.html").then(() => {
+                // Asegurar que la página esté completamente cargada
+                win.webContents.once('did-finish-load', () => {
+                  // Limpiar menú o establecer menú por defecto
+                  setMenuByRole(null, win);
+                });
+              });
+            }
           }
         ]
       },
@@ -431,6 +450,84 @@ ipcMain.handle("login", async (event, usuario, password) => {
           resolve({ success: false, error: "Contraseña incorrecta" });
         }
       }
+    });
+  });
+});
+
+// Obtener rol del usuario actual
+ipcMain.handle("get-user-role", async () => {
+  return currentUserRole;
+});
+
+// Eliminar obra (solo admin)
+ipcMain.handle("eliminar-obra", async (event, idObra) => {
+  return new Promise((resolve) => {
+    // Verificar que el usuario sea administrador
+    if (currentUserRole !== "admin") {
+      return resolve({ success: false, error: "Solo los administradores pueden eliminar obras" });
+    }
+
+    // Validar ID
+    const id = Number(idObra);
+    if (!id || isNaN(id)) {
+      return resolve({ success: false, error: "ID de obra inválido" });
+    }
+
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+
+      // 1. Obtener rutas de imágenes antes de eliminar
+      db.get("SELECT path_img_baja, path_img_alta FROM obras WHERE id_obra = ?", [id], (err, obra) => {
+        if (err) {
+          db.run("ROLLBACK");
+          return resolve({ success: false, error: "Error al obtener datos de la obra" });
+        }
+
+        if (!obra) {
+          db.run("ROLLBACK");
+          return resolve({ success: false, error: "Obra no encontrada" });
+        }
+
+        // 2. Eliminar exposiciones asociadas
+        db.run("DELETE FROM exposiciones WHERE id_obra = ?", [id], (err) => {
+          if (err) {
+            db.run("ROLLBACK");
+            return resolve({ success: false, error: "Error al eliminar exposiciones" });
+          }
+
+          // 3. Eliminar ubicaciones topológicas asociadas
+          db.run("DELETE FROM obra_ubicaciones_topologicas WHERE id_obra = ?", [id], (err) => {
+            if (err) {
+              db.run("ROLLBACK");
+              return resolve({ success: false, error: "Error al eliminar ubicaciones topológicas" });
+            }
+
+            // 4. Eliminar la obra
+            db.run("DELETE FROM obras WHERE id_obra = ?", [id], (err) => {
+              if (err) {
+                db.run("ROLLBACK");
+                return resolve({ success: false, error: "Error al eliminar la obra" });
+              }
+
+              // 5. Eliminar carpetas de imágenes
+              try {
+                if (obra.path_img_baja && fs.existsSync(obra.path_img_baja)) {
+                  fs.rmSync(obra.path_img_baja, { recursive: true, force: true });
+                }
+                if (obra.path_img_alta && fs.existsSync(obra.path_img_alta)) {
+                  fs.rmSync(obra.path_img_alta, { recursive: true, force: true });
+                }
+              } catch (fsErr) {
+                console.error("Error al eliminar carpetas de imágenes:", fsErr);
+                // No fallar la transacción por esto, solo loguear
+              }
+
+              db.run("COMMIT");
+              return resolve({ success: true });
+            });
+          });
+        });
+      });
     });
   });
 });
