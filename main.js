@@ -786,7 +786,7 @@ ipcMain.on("eliminar-artista", (event, idArtista) => {
                 dialog.showMessageBox(win, {
                   type: "warning",
                   title: "Eliminar artista",
-                  message: "No se puede eliminar porque tiene obras asociadas."
+                  message: `No se puede eliminar este artista porque tiene ${rowCnt.cnt} obra(s) asociada(s) en el sistema. Por favor, elimine o modifique las obras primero.`
                 });
                 return;
               }
@@ -949,7 +949,7 @@ ipcMain.on("eliminar-tecnica", (event, idTecnica) => {
             dialog.showMessageBox(win, {
               type: "warning",
               title: "Eliminar técnica",
-              message: "No se puede eliminar porque tiene obras asociadas."
+              message: `No se puede eliminar esta técnica porque tiene ${rowCnt.cnt} obra(s) asociada(s) en el sistema. Por favor, elimine o modifique las obras primero.`
             });
             return;
           }
@@ -1107,7 +1107,7 @@ ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
           dialog.showMessageBox(win, {
             type: "warning",
             title: "Eliminar tipo",
-            message: "No se puede eliminar porque hay obras asociadas a ubicaciones de este tipo."
+            message: `No se puede eliminar este tipo de ubicación topológica porque tiene ${rowUso.cnt} obra(s) asociada(s) en el sistema. Por favor, elimine o modifique las obras primero.`
           });
           return;
         }
@@ -1237,7 +1237,7 @@ ipcMain.on("eliminar-topografica", (event, idTopografica) => {
             dialog.showMessageBox(win, {
               type: "warning",
               title: "Eliminar ubicación topográfica",
-              message: "No se puede eliminar porque tiene obras asociadas."
+              message: `No se puede eliminar esta ubicación topográfica porque tiene ${rowCnt.cnt} obra(s) asociada(s) en el sistema. Por favor, elimine o modifique las obras primero.`
             });
             return;
           }
@@ -1425,7 +1425,7 @@ ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
             dialog.showMessageBox(win, {
               type: "warning",
               title: "Eliminar ubicación topológica",
-              message: "No se puede eliminar porque tiene obras asociadas."
+              message: `No se puede eliminar esta ubicación topológica porque tiene ${rowCnt.cnt} obra(s) asociada(s) en el sistema. Por favor, elimine o modifique las obras primero.`
             });
             return;
           }
