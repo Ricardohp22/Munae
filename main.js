@@ -711,7 +711,136 @@ ipcMain.on("abrir-agregar-artista", (event) => {
 });
 //Eliminar artista
 ipcMain.on("eliminar-artista", (event, idArtista) => {
-  console.log("idArtista", idArtista);
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const artistaId = Number(idArtista);
+
+  // Validaciones básicas
+  if (!Number.isInteger(artistaId) || artistaId <= 0) {
+    dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Eliminar artista",
+      message: "Seleccione un artista válido antes de eliminar."
+    });
+    return;
+  }
+
+  // Verificar existencia del artista
+  db.get(
+    "SELECT id_artista FROM artistas WHERE id_artista = ?",
+    [artistaId],
+    (err, row) => {
+      if (err) {
+        console.error("Error buscando artista:", err);
+        dialog.showMessageBox(win, {
+          type: "error",
+          title: "Eliminar artista",
+          message: "Error al validar el artista. Intente de nuevo."
+        });
+        return;
+      }
+
+      if (!row) {
+        dialog.showMessageBox(win, {
+          type: "warning",
+          title: "Eliminar artista",
+          message: "El artista seleccionado no existe."
+        });
+        return;
+      }
+
+      // Obtener nombre del artista para la confirmación
+      db.get(
+        "SELECT nombre, apellido_paterno, apellido_materno FROM artistas WHERE id_artista = ?",
+        [artistaId],
+        (errNombre, rowNombre) => {
+          if (errNombre) {
+            console.error("Error obteniendo nombre del artista:", errNombre);
+            dialog.showMessageBox(win, {
+              type: "error",
+              title: "Eliminar artista",
+              message: "Error al obtener información del artista."
+            });
+            return;
+          }
+
+          const nombreArtista = rowNombre 
+            ? `${rowNombre.apellido_paterno || ''} ${rowNombre.apellido_materno || ''}, ${rowNombre.nombre}`.trim()
+            : "este artista";
+
+          // Verificar que no tenga obras asociadas
+          db.get(
+            "SELECT COUNT(*) AS cnt FROM obras WHERE id_artista = ?",
+            [artistaId],
+            (err2, rowCnt) => {
+              if (err2) {
+                console.error("Error verificando obras del artista:", err2);
+                dialog.showMessageBox(win, {
+                  type: "error",
+                  title: "Eliminar artista",
+                  message: "No se pudo validar si el artista tiene obras registradas."
+                });
+                return;
+              }
+
+              if (rowCnt && rowCnt.cnt > 0) {
+                dialog.showMessageBox(win, {
+                  type: "warning",
+                  title: "Eliminar artista",
+                  message: "No se puede eliminar porque tiene obras asociadas."
+                });
+                return;
+              }
+
+              // Mostrar confirmación antes de eliminar
+              dialog.showMessageBox(win, {
+                type: "warning",
+                title: "Confirmar eliminación",
+                message: `¿Está seguro que desea eliminar a ${nombreArtista}?`,
+                buttons: ["Cancelar", "Eliminar"],
+                defaultId: 0,
+                cancelId: 0
+              }).then((result) => {
+                // Si el usuario canceló (índice 0) o cerró el diálogo
+                if (result.response === 0) {
+                  return;
+                }
+
+                // Eliminar artista
+                db.run(
+                  "DELETE FROM artistas WHERE id_artista = ?",
+                  [artistaId],
+                  function (err3) {
+                    if (err3) {
+                      console.error("Error eliminando artista:", err3);
+                      dialog.showMessageBox(win, {
+                        type: "error",
+                        title: "Eliminar artista",
+                        message: "Ocurrió un error al eliminar el artista."
+                      });
+                      return;
+                    }
+
+                    dialog.showMessageBox(win, {
+                      type: "info",
+                      title: "Eliminar artista",
+                      message: "Artista eliminado correctamente."
+                    });
+
+                    // Reutilizamos el evento existente para refrescar el combo
+                    if (global.mainWindow) {
+                      global.mainWindow.webContents.send("artista-agregado");
+                    }
+                  }
+                );
+              }).catch((err) => {
+                console.error("Error en diálogo de confirmación:", err);
+              });
+            }
+          );
+        }
+      );
+    }
+  );
 });
 ipcMain.on("artista-agregado", () => {
   if (global.mainWindow) {
