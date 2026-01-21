@@ -888,6 +888,121 @@ ipcMain.on("tecnica-agregada", () => {
     global.mainWindow.webContents.send("tecnica-agregada");
   }
 });
+
+// Eliminar técnica
+ipcMain.on("eliminar-tecnica", (event, idTecnica) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const tecnicaId = Number(idTecnica);
+
+  // Validaciones básicas
+  if (!Number.isInteger(tecnicaId) || tecnicaId <= 0) {
+    dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Eliminar técnica",
+      message: "Seleccione una técnica válida antes de eliminar."
+    });
+    return;
+  }
+
+  // Verificar existencia de la técnica
+  db.get(
+    "SELECT tecnica FROM tecnicas WHERE id_tecnica = ?",
+    [tecnicaId],
+    (err, row) => {
+      if (err) {
+        console.error("Error buscando técnica:", err);
+        dialog.showMessageBox(win, {
+          type: "error",
+          title: "Eliminar técnica",
+          message: "Error al validar la técnica. Intente de nuevo."
+        });
+        return;
+      }
+
+      if (!row) {
+        dialog.showMessageBox(win, {
+          type: "warning",
+          title: "Eliminar técnica",
+          message: "La técnica seleccionada no existe."
+        });
+        return;
+      }
+
+      const nombreTecnica = row.tecnica;
+
+      // Verificar que no tenga obras asociadas
+      db.get(
+        "SELECT COUNT(*) AS cnt FROM obras WHERE id_tecnica = ?",
+        [tecnicaId],
+        (err2, rowCnt) => {
+          if (err2) {
+            console.error("Error verificando obras de la técnica:", err2);
+            dialog.showMessageBox(win, {
+              type: "error",
+              title: "Eliminar técnica",
+              message: "No se pudo validar si la técnica tiene obras registradas."
+            });
+            return;
+          }
+
+          if (rowCnt && rowCnt.cnt > 0) {
+            dialog.showMessageBox(win, {
+              type: "warning",
+              title: "Eliminar técnica",
+              message: "No se puede eliminar porque tiene obras asociadas."
+            });
+            return;
+          }
+
+          // Mostrar confirmación antes de eliminar
+          dialog.showMessageBox(win, {
+            type: "warning",
+            title: "Confirmar eliminación",
+            message: `¿Está seguro que desea eliminar la técnica "${nombreTecnica}"?`,
+            buttons: ["Cancelar", "Eliminar"],
+            defaultId: 0,
+            cancelId: 0
+          }).then((result) => {
+            if (result.response === 0) {
+              return;
+            }
+
+            // Eliminar técnica
+            db.run(
+              "DELETE FROM tecnicas WHERE id_tecnica = ?",
+              [tecnicaId],
+              function (err3) {
+                if (err3) {
+                  console.error("Error eliminando técnica:", err3);
+                  dialog.showMessageBox(win, {
+                    type: "error",
+                    title: "Eliminar técnica",
+                    message: "Ocurrió un error al eliminar la técnica."
+                  });
+                  return;
+                }
+
+                dialog.showMessageBox(win, {
+                  type: "info",
+                  title: "Eliminar técnica",
+                  message: "Técnica eliminada correctamente."
+                });
+
+                // Refrescar el combo
+                if (global.mainWindow) {
+                  global.mainWindow.webContents.send("tecnica-agregada");
+                }
+              }
+            );
+          }).catch((err) => {
+            console.error("Error en diálogo de confirmación:", err);
+          });
+        }
+      );
+    }
+  );
+});
+
 // Insertar ubicación topográfica
 ipcMain.handle("insert-topografica", async (event, ubicacion) => {
   return new Promise((resolve) => {
@@ -927,6 +1042,253 @@ ipcMain.on("topografica-agregada", () => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send("topografica-agregada");
   }
+});
+
+// Eliminar tipo de ubicación topológica (borra sus ubicaciones si no están en uso)
+ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const tipoId = Number(idTipo);
+
+  if (!Number.isInteger(tipoId) || tipoId <= 0) {
+    dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Eliminar tipo",
+      message: "Seleccione un tipo de ubicación válido antes de eliminar."
+    });
+    return;
+  }
+
+  // Verificar existencia y nombre
+  db.get(
+    "SELECT tipo FROM tipo_ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
+    [tipoId],
+    (err, rowTipo) => {
+      if (err) {
+        console.error("Error buscando tipo topológico:", err);
+        dialog.showMessageBox(win, {
+          type: "error",
+          title: "Eliminar tipo",
+          message: "Error al validar el tipo. Intente de nuevo."
+        });
+        return;
+      }
+
+      if (!rowTipo) {
+        dialog.showMessageBox(win, {
+          type: "warning",
+          title: "Eliminar tipo",
+          message: "El tipo seleccionado no existe."
+        });
+        return;
+      }
+
+      const nombreTipo = rowTipo.tipo;
+
+      // Verificar si alguna ubicación de este tipo está usada en obras
+      const sqlUso = `
+        SELECT COUNT(*) AS cnt
+        FROM obra_ubicaciones_topologicas
+        WHERE id_ubicacion_topologica IN (
+          SELECT id_ubicacion_topologica FROM ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?
+        )
+      `;
+      db.get(sqlUso, [tipoId], (errUso, rowUso) => {
+        if (errUso) {
+          console.error("Error verificando uso de ubicaciones del tipo:", errUso);
+          dialog.showMessageBox(win, {
+            type: "error",
+            title: "Eliminar tipo",
+            message: "No se pudo validar si las ubicaciones de este tipo están asociadas a obras."
+          });
+          return;
+        }
+
+        if (rowUso && rowUso.cnt > 0) {
+          dialog.showMessageBox(win, {
+            type: "warning",
+            title: "Eliminar tipo",
+            message: "No se puede eliminar porque hay obras asociadas a ubicaciones de este tipo."
+          });
+          return;
+        }
+
+        dialog.showMessageBox(win, {
+          type: "warning",
+          title: "Confirmar eliminación",
+          message: `¿Eliminar el tipo "${nombreTipo}" y todas sus ubicaciones asociadas?`,
+          buttons: ["Cancelar", "Eliminar"],
+          defaultId: 0,
+          cancelId: 0
+        }).then((result) => {
+          if (result.response === 0) return;
+
+          db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+            db.run(
+              "DELETE FROM ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
+              [tipoId],
+              (errDelUbi) => {
+                if (errDelUbi) {
+                  console.error("Error eliminando ubicaciones del tipo:", errDelUbi);
+                  db.run("ROLLBACK");
+                  dialog.showMessageBox(win, {
+                    type: "error",
+                    title: "Eliminar tipo",
+                    message: "Error al eliminar las ubicaciones asociadas."
+                  });
+                  return;
+                }
+
+                db.run(
+                  "DELETE FROM tipo_ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
+                  [tipoId],
+                  (errDelTipo) => {
+                    if (errDelTipo) {
+                      console.error("Error eliminando tipo topológico:", errDelTipo);
+                      db.run("ROLLBACK");
+                      dialog.showMessageBox(win, {
+                        type: "error",
+                        title: "Eliminar tipo",
+                        message: "Error al eliminar el tipo de ubicación."
+                      });
+                      return;
+                    }
+
+                    db.run("COMMIT");
+                    dialog.showMessageBox(win, {
+                      type: "info",
+                      title: "Eliminar tipo",
+                      message: "Tipo y ubicaciones eliminados correctamente."
+                    });
+
+                    if (global.mainWindow) {
+                      global.mainWindow.webContents.send("ubicacion-topologica-agregada");
+                    }
+                  }
+                );
+              }
+            );
+          });
+        }).catch((errConf) => {
+          console.error("Error en confirmación de eliminar tipo:", errConf);
+        });
+      });
+    }
+  );
+});
+
+// Eliminar ubicación topográfica
+ipcMain.on("eliminar-topografica", (event, idTopografica) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const topograficaId = Number(idTopografica);
+
+  // Validaciones básicas
+  if (!Number.isInteger(topograficaId) || topograficaId <= 0) {
+    dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Eliminar ubicación topográfica",
+      message: "Seleccione una ubicación topográfica válida antes de eliminar."
+    });
+    return;
+  }
+
+  // Verificar existencia de la ubicación topográfica
+  db.get(
+    "SELECT ubicacion FROM ubicaciones_topograficas WHERE id_ubicacion_topografica = ?",
+    [topograficaId],
+    (err, row) => {
+      if (err) {
+        console.error("Error buscando ubicación topográfica:", err);
+        dialog.showMessageBox(win, {
+          type: "error",
+          title: "Eliminar ubicación topográfica",
+          message: "Error al validar la ubicación topográfica. Intente de nuevo."
+        });
+        return;
+      }
+
+      if (!row) {
+        dialog.showMessageBox(win, {
+          type: "warning",
+          title: "Eliminar ubicación topográfica",
+          message: "La ubicación topográfica seleccionada no existe."
+        });
+        return;
+      }
+
+      const nombreTopografica = row.ubicacion;
+
+      // Verificar que no tenga obras asociadas
+      db.get(
+        "SELECT COUNT(*) AS cnt FROM obras WHERE id_ubicacion_topografica = ?",
+        [topograficaId],
+        (err2, rowCnt) => {
+          if (err2) {
+            console.error("Error verificando obras de la ubicación topográfica:", err2);
+            dialog.showMessageBox(win, {
+              type: "error",
+              title: "Eliminar ubicación topográfica",
+              message: "No se pudo validar si la ubicación topográfica tiene obras registradas."
+            });
+            return;
+          }
+
+          if (rowCnt && rowCnt.cnt > 0) {
+            dialog.showMessageBox(win, {
+              type: "warning",
+              title: "Eliminar ubicación topográfica",
+              message: "No se puede eliminar porque tiene obras asociadas."
+            });
+            return;
+          }
+
+          // Mostrar confirmación antes de eliminar
+          dialog.showMessageBox(win, {
+            type: "warning",
+            title: "Confirmar eliminación",
+            message: `¿Está seguro que desea eliminar la ubicación topográfica "${nombreTopografica}"?`,
+            buttons: ["Cancelar", "Eliminar"],
+            defaultId: 0,
+            cancelId: 0
+          }).then((result) => {
+            if (result.response === 0) {
+              return;
+            }
+
+            // Eliminar ubicación topográfica
+            db.run(
+              "DELETE FROM ubicaciones_topograficas WHERE id_ubicacion_topografica = ?",
+              [topograficaId],
+              function (err3) {
+                if (err3) {
+                  console.error("Error eliminando ubicación topográfica:", err3);
+                  dialog.showMessageBox(win, {
+                    type: "error",
+                    title: "Eliminar ubicación topográfica",
+                    message: "Ocurrió un error al eliminar la ubicación topográfica."
+                  });
+                  return;
+                }
+
+                dialog.showMessageBox(win, {
+                  type: "info",
+                  title: "Eliminar ubicación topográfica",
+                  message: "Ubicación topográfica eliminada correctamente."
+                });
+
+                // Refrescar el combo
+                if (global.mainWindow) {
+                  global.mainWindow.webContents.send("topografica-agregada");
+                }
+              }
+            );
+          }).catch((err) => {
+            console.error("Error en diálogo de confirmación:", err);
+          });
+        }
+      );
+    }
+  );
 });
 
 // Insertar ubicaciones topológicas
@@ -998,6 +1360,123 @@ ipcMain.on("ubicacion-topologica-agregada", () => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send("ubicacion-topologica-agregada");
   }
+});
+
+// Eliminar ubicación topológica
+ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const ubicacionTopologicaId = Number(idUbicacionTopologica);
+
+  // Validaciones básicas
+  if (!Number.isInteger(ubicacionTopologicaId) || ubicacionTopologicaId <= 0) {
+    dialog.showMessageBox(win, {
+      type: "warning",
+      title: "Eliminar ubicación topológica",
+      message: "Seleccione una ubicación topológica válida antes de eliminar."
+    });
+    return;
+  }
+
+  // Verificar existencia de la ubicación topológica
+  db.get(
+    `SELECT ut.ubicacion, tut.tipo 
+     FROM ubicaciones_topologicas ut
+     JOIN tipo_ubicaciones_topologicas tut ON ut.id_tipo_ubicacion_topologica = tut.id_tipo_ubicacion_topologica
+     WHERE ut.id_ubicacion_topologica = ?`,
+    [ubicacionTopologicaId],
+    (err, row) => {
+      if (err) {
+        console.error("Error buscando ubicación topológica:", err);
+        dialog.showMessageBox(win, {
+          type: "error",
+          title: "Eliminar ubicación topológica",
+          message: "Error al validar la ubicación topológica. Intente de nuevo."
+        });
+        return;
+      }
+
+      if (!row) {
+        dialog.showMessageBox(win, {
+          type: "warning",
+          title: "Eliminar ubicación topológica",
+          message: "La ubicación topológica seleccionada no existe."
+        });
+        return;
+      }
+
+      const nombreUbicacion = `${row.tipo} - ${row.ubicacion}`;
+
+      // Verificar que no tenga obras asociadas
+      db.get(
+        "SELECT COUNT(*) AS cnt FROM obra_ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
+        [ubicacionTopologicaId],
+        (err2, rowCnt) => {
+          if (err2) {
+            console.error("Error verificando obras de la ubicación topológica:", err2);
+            dialog.showMessageBox(win, {
+              type: "error",
+              title: "Eliminar ubicación topológica",
+              message: "No se pudo validar si la ubicación topológica tiene obras registradas."
+            });
+            return;
+          }
+
+          if (rowCnt && rowCnt.cnt > 0) {
+            dialog.showMessageBox(win, {
+              type: "warning",
+              title: "Eliminar ubicación topológica",
+              message: "No se puede eliminar porque tiene obras asociadas."
+            });
+            return;
+          }
+
+          // Mostrar confirmación antes de eliminar
+          dialog.showMessageBox(win, {
+            type: "warning",
+            title: "Confirmar eliminación",
+            message: `¿Está seguro que desea eliminar la ubicación topológica "${nombreUbicacion}"?`,
+            buttons: ["Cancelar", "Eliminar"],
+            defaultId: 0,
+            cancelId: 0
+          }).then((result) => {
+            if (result.response === 0) {
+              return;
+            }
+
+            // Eliminar ubicación topológica
+            db.run(
+              "DELETE FROM ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
+              [ubicacionTopologicaId],
+              function (err3) {
+                if (err3) {
+                  console.error("Error eliminando ubicación topológica:", err3);
+                  dialog.showMessageBox(win, {
+                    type: "error",
+                    title: "Eliminar ubicación topológica",
+                    message: "Ocurrió un error al eliminar la ubicación topológica."
+                  });
+                  return;
+                }
+
+                dialog.showMessageBox(win, {
+                  type: "info",
+                  title: "Eliminar ubicación topológica",
+                  message: "Ubicación topológica eliminada correctamente."
+                });
+
+                // Refrescar los combos
+                if (global.mainWindow) {
+                  global.mainWindow.webContents.send("ubicacion-topologica-agregada");
+                }
+              }
+            );
+          }).catch((err) => {
+            console.error("Error en diálogo de confirmación:", err);
+          });
+        }
+      );
+    }
+  );
 });
 
 

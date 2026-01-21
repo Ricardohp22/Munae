@@ -23,6 +23,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   abrirAgregarArtista: () => ipcRenderer.send("abrir-agregar-artista"),
   insertArtista: (artista) => ipcRenderer.invoke("insert-artista", artista),
   eliminarArtista: (idArtista) => ipcRenderer.send("eliminar-artista", idArtista),
+  eliminarTipoTopologico: (idTipo) => ipcRenderer.send("eliminar-tipo-topologico", idTipo),
+  eliminarTecnica: (idTecnica) => ipcRenderer.send("eliminar-tecnica", idTecnica),
+  eliminarTopografica: (idTopografica) => ipcRenderer.send("eliminar-topografica", idTopografica),
+  eliminarUbicacionTopologica: (idUbicacionTopologica) => ipcRenderer.send("eliminar-ubicacion-topologica", idUbicacionTopologica),
   //Roles de usuario
   setUserRole: (role) => ipcRenderer.send("set-user-role", role),
   descargarObra: (idObra) => ipcRenderer.invoke("descargar-obra", idObra),

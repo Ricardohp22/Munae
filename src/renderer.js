@@ -4,6 +4,36 @@ function eliminarArtista(){
   const artistas =  document.getElementById("id_artista");
   window.electronAPI.eliminarArtista(artistas.value);
 }
+
+function eliminarTipoTopologico(){
+  const selTipo = document.getElementById("ubi_general_tipo");
+  window.electronAPI.eliminarTipoTopologico(selTipo.value);
+}
+
+function eliminarTecnica(){
+  const tecnicas = document.getElementById("id_tecnica");
+  window.electronAPI.eliminarTecnica(tecnicas.value);
+}
+
+function eliminarTopografica(){
+  const topograficas = document.getElementById("id_ubi_topografica");
+  window.electronAPI.eliminarTopografica(topograficas.value);
+}
+
+function eliminarUbicacionTopologica(nivel){
+  let selectId;
+  if (nivel === 'general') {
+    selectId = 'ubi_general';
+  } else if (nivel === 'sub') {
+    selectId = 'ubi_sub';
+  } else if (nivel === 'sub2') {
+    selectId = 'ubi_sub2';
+  } else {
+    return;
+  }
+  const select = document.getElementById(selectId);
+  window.electronAPI.eliminarUbicacionTopologica(select.value);
+}
 function createOption(value, text) {
   const opt = document.createElement('option');
   opt.value = value;
@@ -21,8 +51,8 @@ function populateSelectWithPlaceholder(sel, placeholderText = 'Seleccione...') {
 }
 
 // Poblador genérico (rows = [{id_x, campo}])
-function populateSelect(sel, rows, valueKey, textFn, placeholder = 'Seleccione...') {
-  //console.log(valueKey);
+function populateSelect(sel, rows, valueKey, textFn, placeholder = 'Seleccione...', keepSelection = true) {
+  const prev = sel.value;
   populateSelectWithPlaceholder(sel, placeholder);
   if (!rows || rows.length === 0) {
     const noOpt = createOption('', 'No hay elementos');
@@ -36,6 +66,10 @@ function populateSelect(sel, rows, valueKey, textFn, placeholder = 'Seleccione..
     const text = typeof textFn === 'function' ? textFn(r) : r[textFn];
     sel.appendChild(createOption(r[valueKey], text));
   });
+  if (keepSelection && prev) {
+    const exists = rows.some(r => String(r[valueKey]) === String(prev));
+    if (exists) sel.value = prev;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -75,15 +109,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.__tiposTopologicos = tiposTop || [];
 
     // Poblar selects de tipos (todos inicialmente)
-    function fillTipoSelectsExcluding(excludeIds = []) {
-      const tiposToShow = window.__tiposTopologicos.filter(t => !excludeIds.includes(String(t.id_tipo_ubicacion_topologica)) && !excludeIds.includes(t.id_tipo_ubicacion_topologica));
-      // Limpiar y poblar
-      populateSelect(selTipoGeneral, tiposToShow, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Almacén general)');
-      populateSelect(selTipoSub, tiposToShow, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión)');
-      populateSelect(selTipoSub2, tiposToShow, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión 2)');
+    function populateTipoSelect(targetSelect, excludeIds = [], placeholder) {
+      const tiposToShow = window.__tiposTopologicos.filter(
+        t => !excludeIds.includes(String(t.id_tipo_ubicacion_topologica)) && !excludeIds.includes(t.id_tipo_ubicacion_topologica)
+      );
+      const prev = targetSelect.value;
+      populateSelect(targetSelect, tiposToShow, 'id_tipo_ubicacion_topologica', 'tipo', placeholder);
+      // intentar mantener selección previa si sigue disponible
+      const stillExists = tiposToShow.some(t => String(t.id_tipo_ubicacion_topologica) === String(prev));
+      if (stillExists) targetSelect.value = prev;
     }
 
-    fillTipoSelectsExcluding([]);
+    function inicializarTipos() {
+      populateTipoSelect(selTipoGeneral, [], 'Seleccione tipo (Almacén general)');
+      populateTipoSelect(selTipoSub, [], 'Seleccione tipo (Subdivisión)');
+      populateTipoSelect(selTipoSub2, [], 'Seleccione tipo (Subdivisión 2)');
+    }
+
+    inicializarTipos();
 
     // Poblar topográficas
     populateSelect(selTopografica, topograficas, 'id_ubicacion_topografica', 'ubicacion', 'Seleccione ubicación topográfica');
@@ -109,21 +152,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     selTipoGeneral.addEventListener('change', async () => {
       await cargarUbicacionesPara(selTipoGeneral, selUbiGeneral);
-      // actualizar tipos disponibles en los otros selects para excluir el seleccionado
       const exclude = [selTipoGeneral.value].filter(Boolean);
-      fillTipoSelectsExcluding(exclude);
+      populateTipoSelect(selTipoSub, exclude, 'Seleccione tipo (Subdivisión)');
+      populateTipoSelect(selTipoSub2, exclude, 'Seleccione tipo (Subdivisión 2)');
     });
 
     selTipoSub.addEventListener('change', async () => {
       await cargarUbicacionesPara(selTipoSub, selUbiSub);
       const exclude = [selTipoGeneral.value, selTipoSub.value].filter(Boolean);
-      fillTipoSelectsExcluding(exclude);
+      populateTipoSelect(selTipoSub2, exclude, 'Seleccione tipo (Subdivisión 2)');
+      // mantener general y sub sin repoblar para que no pierdan selección
     });
 
     selTipoSub2.addEventListener('change', async () => {
       await cargarUbicacionesPara(selTipoSub2, selUbiSub2);
-      const exclude = [selTipoGeneral.value, selTipoSub.value, selTipoSub2.value].filter(Boolean);
-      fillTipoSelectsExcluding(exclude);
     });
 
     // Inicial: deshabilitar ubi selects hasta seleccionar tipo
@@ -312,12 +354,22 @@ window.electronAPI.onUbicacionTopologicaAgregada(async () => {
   const selTipoSub = document.getElementById("ubi_sub_tipo");
   const selTipoSub2 = document.getElementById("ubi_sub2_tipo");
 
-  // Usamos la misma función que ya tienes para rellenar selects
-  populateSelect(selTipoGeneral, tiposTop, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Almacén general)');
-  populateSelect(selTipoSub, tiposTop, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión)');
-  populateSelect(selTipoSub2, tiposTop, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión 2)');
+  window.__tiposTopologicos = tiposTop || [];
 
-  // ⚡ Además, limpiar los selects de ubicaciones dependientes
+  // Repoblar tipos desde DB y reiniciar selects al valor por defecto
+  const tiposToShowGeneral = window.__tiposTopologicos;
+  const tiposToShowSub = window.__tiposTopologicos;
+  const tiposToShowSub2 = window.__tiposTopologicos;
+
+  populateSelect(selTipoGeneral, tiposToShowGeneral, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Almacén general)', false);
+  populateSelect(selTipoSub, tiposToShowSub, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión)', false);
+  populateSelect(selTipoSub2, tiposToShowSub2, 'id_tipo_ubicacion_topologica', 'tipo', 'Seleccione tipo (Subdivisión 2)', false);
+
+  selTipoGeneral.value = "";
+  selTipoSub.value = "";
+  selTipoSub2.value = "";
+
+  // Reiniciar selects de ubicaciones dependientes
   const selUbiGeneral = document.getElementById("ubi_general");
   const selUbiSub = document.getElementById("ubi_sub");
   const selUbiSub2 = document.getElementById("ubi_sub2");
