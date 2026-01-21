@@ -1,5 +1,9 @@
 // src/renderer.js
 // Helper DOM
+function eliminarArtista(){
+  const artistas =  document.getElementById("id_artista");
+  window.electronAPI.eliminarArtista(artistas.value);
+}
 function createOption(value, text) {
   const opt = document.createElement('option');
   opt.value = value;

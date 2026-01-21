@@ -22,11 +22,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onArtistaAgregado: (callback) => ipcRenderer.on("artista-agregado", callback),
   abrirAgregarArtista: () => ipcRenderer.send("abrir-agregar-artista"),
   insertArtista: (artista) => ipcRenderer.invoke("insert-artista", artista),
+  eliminarArtista: (idArtista) => ipcRenderer.send("eliminar-artista", idArtista),
   //Roles de usuario
   setUserRole: (role) => ipcRenderer.send("set-user-role", role),
   descargarObra: (idObra) => ipcRenderer.invoke("descargar-obra", idObra),
   getImagenesCarpeta: (folderPath) => ipcRenderer.invoke("get-imagenes-carpeta", folderPath),
-  // 🚀 Nueva API para ficha
+  //API para ficha
   getFichaObra: (idObra) => ipcRenderer.invoke("get-ficha-obra", idObra),
   onCargarFicha: (callback) => ipcRenderer.on("cargar-ficha", (event, idObra) => callback(idObra)),
   abrirFicha: (idObra) => ipcRenderer.send("abrir-ficha", idObra),
@@ -41,7 +42,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   guardarObra: (datos) => ipcRenderer.invoke("guardar-obra", datos),
   seleccionarImagen: () => ipcRenderer.invoke("seleccionar-imagen"),
 
-  // nuevas funciones para poblar selects
+  //funciones para poblar selects
   getArtistas: () => ipcRenderer.invoke('get-artistas'),
   getTecnicas: () => ipcRenderer.invoke('get-tecnicas'),
   getTiposTopologicos: () => ipcRenderer.invoke('get-tipos-topologicos'),

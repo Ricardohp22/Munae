@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const db = require("./src/database");
 //const { globalShortcut } = require("electron");
-let currentUserRole = null; // ⚡ Cambiar dinámicamente según login
+let currentUserRole = null; // Cambiar dinámicamente según login
 
 function setMenuByRole(role, win) {
   const template = [
@@ -708,6 +708,10 @@ ipcMain.on("abrir-agregar-artista", (event) => {
     }
   });
   modal.loadFile("src/agregarArtista.html");
+});
+//Eliminar artista
+ipcMain.on("eliminar-artista", (event, idArtista) => {
+  console.log("idArtista", idArtista);
 });
 ipcMain.on("artista-agregado", () => {
   if (global.mainWindow) {
