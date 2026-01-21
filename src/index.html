@@ -123,12 +123,18 @@
             </select>
             <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
               onclick="window.electronAPI.abrirAgregarUbicacionTopologica()">Agregar</button>
-          <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
-            onclick="eliminarTipoTopologico()">Eliminar</button>
+            <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
+              onclick="editarTipoTopologico()">Editar</button>
+            <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
+              onclick="eliminarTipoTopologico()">Eliminar</button>
           </div>
           <div class="d-flex gap-2 mt-2">
             <select id="ubi_general" class="form-select flex-grow-1">
             </select>
+            <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;"
+              onclick="agregarUbicacionTopologicaIndividual()">Agregar</button>
+            <button type="button" class="btn" style="background-color: #fff9c4; border-color: #fff9c4; color: #f57f17;"
+              onclick="editarUbicacionTopologicaIndividual()">Editar</button>
             <button type="button" class="btn" style="background-color: #f8a5a5; border-color: #f8a5a5; color: #721c24;"
               onclick="eliminarUbicacionTopologica('general')">Eliminar</button>
           </div>

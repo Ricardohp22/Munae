@@ -6,7 +6,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   notificarUbicacionTopologicaAgregada: () => ipcRenderer.send("ubicacion-topologica-agregada"),
   onUbicacionTopologicaAgregada: (callback) => ipcRenderer.on("ubicacion-topologica-agregada", callback),
   abrirAgregarUbicacionTopologica: () => ipcRenderer.send("abrir-agregar-ubicacion-topologica"),
+  abrirAgregarUbicacionTopologicaIndividual: (idTipo) => ipcRenderer.send("abrir-agregar-ubicacion-topologica-individual", idTipo),
+  abrirEditarUbicacionTopologicaIndividual: (idUbicacion) => ipcRenderer.send("abrir-editar-ubicacion-topologica-individual", idUbicacion),
+  abrirEditarTipoTopologico: (idTipo) => ipcRenderer.send("abrir-editar-tipo-topologico", idTipo),
   insertUbicacionTopologica: (data) => ipcRenderer.invoke("insert-ubicacion-topologica", data),
+  insertUbicacionTopologicaIndividual: (idTipo, ubicacion) => ipcRenderer.invoke("insert-ubicacion-topologica-individual", idTipo, ubicacion),
+  updateUbicacionTopologicaIndividual: (idUbicacion, ubicacion) => ipcRenderer.invoke("update-ubicacion-topologica-individual", idUbicacion, ubicacion),
+  updateTipoTopologico: (idTipo, tipo) => ipcRenderer.invoke("update-tipo-topologico", idTipo, tipo),
   // Ubicaciones Topográficas
   notificarTopograficaAgregada: () => ipcRenderer.send("topografica-agregada"),
   onTopograficaAgregada: (callback) => ipcRenderer.on("topografica-agregada", callback),
@@ -66,5 +72,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Listeners para recibir datos al editar
   onCargarDatosArtista: (callback) => ipcRenderer.on('cargar-datos-artista', (event, id, datos) => callback(event, id, datos)),
   onCargarDatosTecnica: (callback) => ipcRenderer.on('cargar-datos-tecnica', (event, id, datos) => callback(event, id, datos)),
-  onCargarDatosTopografica: (callback) => ipcRenderer.on('cargar-datos-topografica', (event, id, datos) => callback(event, id, datos))
+  onCargarDatosTopografica: (callback) => ipcRenderer.on('cargar-datos-topografica', (event, id, datos) => callback(event, id, datos)),
+  onCargarDatosUbicacionTopologica: (callback) => ipcRenderer.on('cargar-datos-ubicacion-topologica', (event, id, datos) => callback(event, id, datos)),
+  onCargarDatosTipoTopologico: (callback) => ipcRenderer.on('cargar-datos-tipo-topologico', (event, id, datos) => callback(event, id, datos)),
+  onCargarTipoParaAgregar: (callback) => ipcRenderer.on('cargar-tipo-para-agregar', (event, id) => callback(event, id))
 });

@@ -1560,6 +1560,220 @@ ipcMain.on("abrir-agregar-ubicacion-topologica", (event) => {
   modal.loadFile("src/agregarUbicacionTopologica.html");
 });
 
+// Abrir ventana para agregar ubicación topológica individual
+ipcMain.on("abrir-agregar-ubicacion-topologica-individual", async (event, idTipo) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const tipoId = Number(idTipo);
+
+  if (!Number.isInteger(tipoId) || tipoId <= 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Agregar ubicación topológica",
+      message: "Seleccione un tipo de ubicación topológica válido."
+    });
+    return;
+  }
+
+  // Verificar que el tipo existe
+  const tipo = await allAsync(
+    "SELECT tipo FROM tipo_ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
+    [tipoId]
+  );
+
+  if (!tipo || tipo.length === 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Agregar ubicación topológica",
+      message: "El tipo seleccionado no existe."
+    });
+    return;
+  }
+
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/agregarUbicacionTopologicaIndividual.html");
+
+  modal.webContents.once("did-finish-load", () => {
+    modal.webContents.send("cargar-tipo-para-agregar", tipoId);
+  });
+});
+
+// Insertar ubicación topológica individual
+ipcMain.handle("insert-ubicacion-topologica-individual", async (event, idTipo, ubicacion) => {
+  return new Promise((resolve) => {
+    // Verificar que no exista otra ubicación con el mismo nombre en el mismo tipo
+    const sqlCheck = `SELECT COUNT(*) as count 
+                      FROM ubicaciones_topologicas 
+                      WHERE id_tipo_ubicacion_topologica = ? AND ubicacion = ?`;
+    db.get(sqlCheck, [idTipo, ubicacion.trim()], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "Ya existe una ubicación con este nombre en este tipo." });
+      }
+
+      const sqlInsert = `INSERT INTO ubicaciones_topologicas (id_tipo_ubicacion_topologica, ubicacion) VALUES (?, ?)`;
+      db.run(sqlInsert, [idTipo, ubicacion.trim()], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al insertar" });
+        resolve({ success: true, id: this.lastID });
+      });
+    });
+  });
+});
+
+// Abrir ventana para editar ubicación topológica individual
+ipcMain.on("abrir-editar-ubicacion-topologica-individual", async (event, idUbicacion) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const ubicacionId = Number(idUbicacion);
+
+  if (!Number.isInteger(ubicacionId) || ubicacionId <= 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar ubicación topológica",
+      message: "Seleccione una ubicación topológica válida para editar."
+    });
+    return;
+  }
+
+  // Obtener datos de la ubicación topológica
+  const ubicacion = await allAsync(
+    "SELECT ubicacion FROM ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
+    [ubicacionId]
+  );
+
+  if (!ubicacion || ubicacion.length === 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar ubicación topológica",
+      message: "La ubicación topológica seleccionada no existe."
+    });
+    return;
+  }
+
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/editarUbicacionTopologicaIndividual.html");
+
+  modal.webContents.once("did-finish-load", () => {
+    modal.webContents.send("cargar-datos-ubicacion-topologica", ubicacionId, ubicacion[0]);
+  });
+});
+
+// Actualizar ubicación topológica individual
+ipcMain.handle("update-ubicacion-topologica-individual", async (event, idUbicacion, ubicacion) => {
+  return new Promise((resolve) => {
+    // Obtener el tipo de la ubicación actual
+    db.get(
+      "SELECT id_tipo_ubicacion_topologica FROM ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
+      [idUbicacion],
+      (err, row) => {
+        if (err) return resolve({ success: false, error: "Error en DB" });
+        if (!row) return resolve({ success: false, error: "Ubicación no encontrada" });
+
+        const idTipo = row.id_tipo_ubicacion_topologica;
+
+        // Verificar que no exista otra ubicación con el mismo nombre en el mismo tipo (excepto la actual)
+        const sqlCheck = `SELECT COUNT(*) as count 
+                          FROM ubicaciones_topologicas 
+                          WHERE id_tipo_ubicacion_topologica = ? AND ubicacion = ? AND id_ubicacion_topologica != ?`;
+        db.get(sqlCheck, [idTipo, ubicacion.trim(), idUbicacion], (err2, row2) => {
+          if (err2) return resolve({ success: false, error: "Error en DB" });
+          if (row2.count > 0) {
+            return resolve({ success: false, error: "Ya existe otra ubicación con este nombre en este tipo." });
+          }
+
+          const sqlUpdate = `UPDATE ubicaciones_topologicas SET ubicacion = ? WHERE id_ubicacion_topologica = ?`;
+          db.run(sqlUpdate, [ubicacion.trim(), idUbicacion], function (err3) {
+            if (err3) return resolve({ success: false, error: "Error al actualizar" });
+            resolve({ success: true });
+          });
+        });
+      }
+    );
+  });
+});
+
+// Abrir ventana para editar tipo de ubicación topológica
+ipcMain.on("abrir-editar-tipo-topologico", async (event, idTipo) => {
+  const parentWin = BrowserWindow.fromWebContents(event.sender);
+  const tipoId = Number(idTipo);
+
+  if (!Number.isInteger(tipoId) || tipoId <= 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar tipo",
+      message: "Seleccione un tipo de ubicación topológica válido para editar."
+    });
+    return;
+  }
+
+  // Obtener datos del tipo
+  const tipo = await allAsync(
+    "SELECT tipo FROM tipo_ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
+    [tipoId]
+  );
+
+  if (!tipo || tipo.length === 0) {
+    dialog.showMessageBox(parentWin, {
+      type: "warning",
+      title: "Editar tipo",
+      message: "El tipo seleccionado no existe."
+    });
+    return;
+  }
+
+  const modal = new BrowserWindow({
+    width: 400,
+    height: 300,
+    parent: parentWin,
+    modal: true,
+    webPreferences: {
+      preload: path.join(__dirname, "src/preload.js"),
+      contextIsolation: true
+    }
+  });
+  modal.loadFile("src/editarTipoTopologico.html");
+
+  modal.webContents.once("did-finish-load", () => {
+    modal.webContents.send("cargar-datos-tipo-topologico", tipoId, tipo[0]);
+  });
+});
+
+// Actualizar tipo de ubicación topológica
+ipcMain.handle("update-tipo-topologico", async (event, idTipo, tipo) => {
+  return new Promise((resolve) => {
+    // Verificar que no exista otro tipo con el mismo nombre (excepto el actual)
+    const sqlCheck = `SELECT COUNT(*) as count FROM tipo_ubicaciones_topologicas WHERE tipo = ? AND id_tipo_ubicacion_topologica != ?`;
+    db.get(sqlCheck, [tipo, idTipo], (err, row) => {
+      if (err) return resolve({ success: false, error: "Error en DB" });
+      if (row.count > 0) {
+        return resolve({ success: false, error: "Ya existe otro tipo con este nombre." });
+      }
+
+      const sqlUpdate = `UPDATE tipo_ubicaciones_topologicas SET tipo = ? WHERE id_tipo_ubicacion_topologica = ?`;
+      db.run(sqlUpdate, [tipo, idTipo], function (err2) {
+        if (err2) return resolve({ success: false, error: "Error al actualizar" });
+        resolve({ success: true });
+      });
+    });
+  });
+});
+
 // Notificar a renderer que hubo un cambio
 ipcMain.on("ubicacion-topologica-agregada", () => {
   if (global.mainWindow) {

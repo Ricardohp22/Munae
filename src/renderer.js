@@ -61,6 +61,33 @@ function eliminarUbicacionTopologica(nivel){
   const select = document.getElementById(selectId);
   window.electronAPI.eliminarUbicacionTopologica(select.value);
 }
+
+function agregarUbicacionTopologicaIndividual(){
+  const tipoSelect = document.getElementById("ubi_general_tipo");
+  if (!tipoSelect.value) {
+    alert("Seleccione primero un tipo de ubicación topológica.");
+    return;
+  }
+  window.electronAPI.abrirAgregarUbicacionTopologicaIndividual(tipoSelect.value);
+}
+
+function editarUbicacionTopologicaIndividual(){
+  const ubicacionSelect = document.getElementById("ubi_general");
+  if (!ubicacionSelect.value) {
+    alert("Seleccione una ubicación topológica para editar.");
+    return;
+  }
+  window.electronAPI.abrirEditarUbicacionTopologicaIndividual(ubicacionSelect.value);
+}
+
+function editarTipoTopologico(){
+  const tipoSelect = document.getElementById("ubi_general_tipo");
+  if (!tipoSelect.value) {
+    alert("Seleccione un tipo de ubicación topológica para editar.");
+    return;
+  }
+  window.electronAPI.abrirEditarTipoTopologico(tipoSelect.value);
+}
 function createOption(value, text) {
   const opt = document.createElement('option');
   opt.value = value;
