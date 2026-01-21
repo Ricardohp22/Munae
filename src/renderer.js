@@ -259,6 +259,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (ultimaObra.estado_conservacion) {
           document.getElementById('estado_conservacion').value = ultimaObra.estado_conservacion;
         }
+        
+        // Precargar exposiciones si existen
+        if (ultimaObra.exposiciones && Array.isArray(ultimaObra.exposiciones) && ultimaObra.exposiciones.length > 0) {
+          listaExposiciones = ultimaObra.exposiciones.map(e => e.exposicion || e);
+          renderizarExposiciones();
+        } else {
+          listaExposiciones = [];
+          renderizarExposiciones();
+        }
       } catch (err) {
         console.error('Error precargando última obra:', err);
       }
@@ -305,6 +314,56 @@ document.getElementById('btnImgAlta').addEventListener('click', async () => {
   console.log('ruta_alta', ruta);
 }); */
 
+// Variable global para almacenar la lista de exposiciones
+let listaExposiciones = [];
+
+// Función para agregar una exposición a la lista
+function agregarExposicion() {
+  const input = document.getElementById("exposiciones");
+  const texto = input.value.trim();
+  
+  if (!texto) {
+    alert("Por favor, ingrese el nombre de la exposición.");
+    return;
+  }
+  
+  // Verificar que no esté duplicada
+  if (listaExposiciones.includes(texto)) {
+    alert("Esta exposición ya está en la lista.");
+    return;
+  }
+  
+  listaExposiciones.push(texto);
+  input.value = "";
+  renderizarExposiciones();
+}
+
+// Función para eliminar una exposición de la lista
+function eliminarExposicion(index) {
+  listaExposiciones.splice(index, 1);
+  renderizarExposiciones();
+}
+
+// Función para renderizar la lista de exposiciones
+function renderizarExposiciones() {
+  const contenedor = document.getElementById("lista-exposiciones");
+  contenedor.innerHTML = "";
+  
+  if (listaExposiciones.length === 0) {
+    return;
+  }
+  
+  listaExposiciones.forEach((expo, index) => {
+    const item = document.createElement("div");
+    item.className = "exposicion-item";
+    item.innerHTML = `
+      <span class="exposicion-texto">${expo}</span>
+      <button type="button" class="exposicion-eliminar" onclick="eliminarExposicion(${index})">Eliminar</button>
+    `;
+    contenedor.appendChild(item);
+  });
+}
+
 //hacer validacion al dar click en guardar
 document.getElementById("btnGuardar").addEventListener("click", async () => {
   const datos = {
@@ -326,7 +385,7 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
     id_ubi_topografica: document.getElementById("id_ubi_topografica").value,
     observaciones: document.getElementById("observaciones").value,
     estado_conservacion: document.getElementById("estado_conservacion").value,
-    exposiciones: document.getElementById("exposiciones").value,
+    exposiciones: listaExposiciones, // Enviar la lista en lugar del valor del input
     imagenes_baja: imgsBaja,   // <<--- ahora arrays
     imagenes_alta: imgsAlta    // <<--- ahora arrays
   };
@@ -347,6 +406,8 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
     mostrarMensaje("¡Registro exitoso!", "exito");
     document.getElementById("form-obra").reset();
     imgsBaja = []; imgsAlta = [];
+    listaExposiciones = []; // Limpiar lista de exposiciones
+    renderizarExposiciones(); // Actualizar visualización
     renderAllLists();
     // Precargar con la última obra guardada (que acabamos de guardar)
     if (window.precargarUltimaObra) {

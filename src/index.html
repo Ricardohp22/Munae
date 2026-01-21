@@ -123,6 +123,46 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
+    /* Lista de exposiciones */
+    #lista-exposiciones {
+      min-height: 40px;
+    }
+    .exposicion-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      margin-bottom: 0.5rem;
+      background-color: rgba(255, 255, 255, 0.8);
+      border: 1px solid #c9a982;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    .exposicion-item:hover {
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .exposicion-texto {
+      flex-grow: 1;
+      color: #621132;
+      font-weight: 500;
+    }
+    .exposicion-eliminar {
+      background-color: #f8a5a5;
+      border-color: #f8a5a5;
+      color: #721c24;
+      border-radius: 4px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .exposicion-eliminar:hover {
+      background-color: #f48fb1;
+      border-color: #f48fb1;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 
@@ -277,7 +317,13 @@
       <!-- 11. Exposiciones -->
       <div class="mb-3">
         <label for="exposiciones" class="form-label">11. Exposiciones</label>
-        <input type="text" id="exposiciones" class="form-control" maxlength="100">
+        <div class="d-flex gap-2 mb-2">
+          <input type="text" id="exposiciones" class="form-control" maxlength="150" placeholder="Ingrese el nombre de la exposición">
+          <button type="button" class="btn" style="background-color: #a5d6a7; border-color: #a5d6a7; color: #1b5e20;" onclick="agregarExposicion()">Agregar</button>
+        </div>
+        <div id="lista-exposiciones" class="mt-2">
+          <!-- Las exposiciones se agregarán aquí dinámicamente -->
+        </div>
       </div>
 
       <!-- 12. Dimensiones Soporte -->

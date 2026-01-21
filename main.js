@@ -349,14 +349,23 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
             { id: datos.ubi_sub2, nivel: 3 }
           ].filter(u => !!u.id);
 
-          if (ubicaciones.length === 0) {
+          // Guardar exposiciones si existen
+          const exposiciones = Array.isArray(datos.exposiciones) ? datos.exposiciones.filter(e => e && e.trim()) : [];
+          const queryExposicion = `
+            INSERT INTO exposiciones (id_obra, exposicion)
+            VALUES (?, ?)
+          `;
+
+          // Si no hay ubicaciones ni exposiciones, hacer commit
+          if (ubicaciones.length === 0 && exposiciones.length === 0) {
             db.run("COMMIT");
             return resolve({ success: true, id: idObra });
           }
 
-          let pendientes = ubicaciones.length;
+          let pendientes = ubicaciones.length + exposiciones.length;
           let huboError = false;
 
+          // Guardar ubicaciones topológicas
           ubicaciones.forEach(u => {
             db.run(queryUbicacion, [idObra, u.id, u.nivel], (err2) => {
               if (err2) huboError = true;
@@ -367,7 +376,27 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
                   db.run("ROLLBACK");
                   // Limpieza de carpetas creadas
                   createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
-                  return resolve({ success: false, error: "Error al guardar ubicaciones" });
+                  return resolve({ success: false, error: "Error al guardar ubicaciones o exposiciones" });
+                } else {
+                  db.run("COMMIT");
+                  return resolve({ success: true, id: idObra });
+                }
+              }
+            });
+          });
+
+          // Guardar exposiciones
+          exposiciones.forEach(expo => {
+            db.run(queryExposicion, [idObra, expo.trim()], (err2) => {
+              if (err2) huboError = true;
+              pendientes -= 1;
+
+              if (pendientes === 0) {
+                if (huboError) {
+                  db.run("ROLLBACK");
+                  // Limpieza de carpetas creadas
+                  createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
+                  return resolve({ success: false, error: "Error al guardar ubicaciones o exposiciones" });
                 } else {
                   db.run("COMMIT");
                   return resolve({ success: true, id: idObra });
@@ -561,8 +590,7 @@ ipcMain.handle("get-ultima-obra", async () => {
            o.id_ubicacion_topografica,
            o.observaciones,
            o.estado_conservacion,
-           o.descripcion,
-           o.exposiciones
+           o.descripcion
     FROM obras o
     ORDER BY o.id_obra DESC
     LIMIT 1
@@ -627,6 +655,14 @@ ipcMain.handle("get-ultima-obra", async () => {
     }
   }
 
+  // Obtener exposiciones de la nueva tabla
+  const exposiciones = await allAsync(`
+    SELECT exposicion
+    FROM exposiciones
+    WHERE id_obra = ?
+    ORDER BY id_exposicion
+  `, [obra.id_obra]);
+
   return {
     ...obra,
     ubi_general_tipo: ubiGeneralTipo,
@@ -634,7 +670,8 @@ ipcMain.handle("get-ultima-obra", async () => {
     ubi_sub_tipo: ubiSubTipo,
     ubi_sub: ubiSub ? ubiSub.id_ubicacion_topologica : null,
     ubi_sub2_tipo: ubiSub2Tipo,
-    ubi_sub2: ubiSub2 ? ubiSub2.id_ubicacion_topologica : null
+    ubi_sub2: ubiSub2 ? ubiSub2.id_ubicacion_topologica : null,
+    exposiciones: exposiciones.map(e => ({ exposicion: e.exposicion }))
   };
 });
 
@@ -652,7 +689,6 @@ ipcMain.handle("get-ficha-obra", async (event, idObra) => {
            o.observaciones,
            o.estado_conservacion,
            o.descripcion,
-           o.exposiciones,
            o.path_img_baja,
            o.path_img_alta,
            a.nombre AS artista_nombre,
@@ -668,6 +704,14 @@ ipcMain.handle("get-ficha-obra", async (event, idObra) => {
   `;
 
   const obra = await allAsync(sql, [idObra]);
+  
+  // Obtener exposiciones de la nueva tabla
+  const exposiciones = await allAsync(`
+    SELECT exposicion
+    FROM exposiciones
+    WHERE id_obra = ?
+    ORDER BY id_exposicion
+  `, [idObra]);
 
   // Ubicación topológica nivel 1 con tipo
   const sqlTopo = `
@@ -679,7 +723,11 @@ ipcMain.handle("get-ficha-obra", async (event, idObra) => {
   `;
   const ubicacionesTopo = await allAsync(sqlTopo, [idObra]);
 
-  return { ...obra[0], ubicacionesTopo };
+  return { 
+    ...obra[0], 
+    ubicacionesTopo,
+    exposiciones: exposiciones.map(e => e.exposicion)
+  };
 });
 ipcMain.on("abrir-ficha", (event, idObra) => {
   const parentWin = BrowserWindow.fromWebContents(event.sender);
@@ -748,6 +796,14 @@ ipcMain.handle("descargar-obra", async (event, idObra) => {
       WHERE otu.id_obra = ? AND otu.nivel = 1
     `, [idObra]);
 
+    // Obtener exposiciones de la nueva tabla
+    const exposiciones = await allAsync(`
+      SELECT exposicion
+      FROM exposiciones
+      WHERE id_obra = ?
+      ORDER BY id_exposicion
+    `, [idObra]);
+
     // 2. Crear dialog para elegir dónde guardar
     const { filePath } = await dialog.showSaveDialog({
       title: "Guardar obra",
@@ -783,7 +839,7 @@ ipcMain.handle("descargar-obra", async (event, idObra) => {
       doc.text(`Observaciones: ${o.observaciones || ""}`);
       doc.text(`Estado de conservación: ${o.estado_conservacion || ""}`);
       doc.text(`Descripción: ${o.descripcion || ""}`);
-      doc.text(`Exposiciones: ${o.exposiciones || ""}`);
+      doc.text(`Exposiciones: ${exposiciones.length > 0 ? exposiciones.map(e => e.exposicion).join(", ") : ""}`);
 
       doc.end();
       stream.on("finish", resolve);

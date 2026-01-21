@@ -18,7 +18,7 @@ window.electronAPI.onCargarFicha(async (idObra) => {
     <p><strong>Observaciones:</strong> ${obra.observaciones || ""}</p>
     <p><strong>Estado conservación:</strong> ${obra.estado_conservacion || ""}</p>
     <p><strong>Descripción:</strong> ${obra.descripcion || ""}</p>
-    <p><strong>Exposiciones:</strong> ${obra.exposiciones || ""}</p>
+    <p><strong>Exposiciones:</strong> ${Array.isArray(obra.exposiciones) && obra.exposiciones.length > 0 ? obra.exposiciones.join(", ") : ""}</p>
   `;
 
   // Renderizar imágenes
