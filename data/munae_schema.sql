@@ -72,3 +72,19 @@ CREATE TABLE IF NOT EXISTS obra_ubicaciones_topologicas (
   FOREIGN KEY (id_obra) REFERENCES obras(id_obra),
   FOREIGN KEY (id_ubicacion_topologica) REFERENCES ubicaciones_topologicas(id_ubicacion_topologica)
 );
+
+-- Tabla de usuarios
+CREATE TABLE IF NOT EXISTS usuarios (
+  id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  rol TEXT NOT NULL CHECK (rol IN ('admin', 'consulta'))
+);
+
+-- Tabla de exposiciones (tabla puente: obra ↔ exposiciones)
+CREATE TABLE IF NOT EXISTS exposiciones (
+  id_exposicion INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_obra INTEGER NOT NULL,
+  exposicion VARCHAR(100) NOT NULL,
+  FOREIGN KEY (id_obra) REFERENCES obras(id_obra)
+);

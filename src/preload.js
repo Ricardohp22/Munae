@@ -78,5 +78,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onCargarDatosTopografica: (callback) => ipcRenderer.on('cargar-datos-topografica', (event, id, datos) => callback(event, id, datos)),
   onCargarDatosUbicacionTopologica: (callback) => ipcRenderer.on('cargar-datos-ubicacion-topologica', (event, id, datos) => callback(event, id, datos)),
   onCargarDatosTipoTopologico: (callback) => ipcRenderer.on('cargar-datos-tipo-topologico', (event, id, datos) => callback(event, id, datos)),
-  onCargarTipoParaAgregar: (callback) => ipcRenderer.on('cargar-tipo-para-agregar', (event, id) => callback(event, id))
+  onCargarTipoParaAgregar: (callback) => ipcRenderer.on('cargar-tipo-para-agregar', (event, id) => callback(event, id)),
+  // Obtener ruta de la base de datos (útil para depuración)
+  getDatabasePath: () => ipcRenderer.invoke('get-database-path')
 });

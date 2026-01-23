@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const db = require("./src/database");
+const { initializeDatabase, getDatabase } = require("./src/database");
 //const { globalShortcut } = require("electron");
 let currentUserRole = null; // Cambiar dinámicamente según login
+let db = null; // Se inicializará cuando app esté listo
 
 function setMenuByRole(role, win) {
   const template = [
@@ -164,7 +165,8 @@ const createWindow = () => {
 // Helper para convertir callback -> Promise
 function allAsync(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
+    const database = getDatabase();
+    database.all(sql, params, (err, rows) => {
       if (err) reject(err);
       else resolve(rows);
     });
@@ -251,8 +253,9 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
     const imgsBaja = Array.isArray(datos.imagenes_baja) ? datos.imagenes_baja.slice(0, 4) : [];
     const imgsAlta = Array.isArray(datos.imagenes_alta) ? datos.imagenes_alta.slice(0, 4) : [];
 
-    const imgBaseDir = path.join(__dirname, "data/images");
-    if (!fs.existsSync(imgBaseDir)) fs.mkdirSync(imgBaseDir, { recursive: true });
+    // Obtener ruta de imágenes desde el módulo de rutas
+    const pathsModule = require("./src/paths");
+    const imgBaseDir = pathsModule.getImagesPath();
 
     let bajaDirPath = null;
     let altaDirPath = null;
@@ -294,8 +297,9 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
     }
 
     // Ahora la transacción de DB
-    db.serialize(() => {
-      db.run("BEGIN TRANSACTION");
+    const database = getDatabase();
+    database.serialize(() => {
+      database.run("BEGIN TRANSACTION");
 
       const queryObra = `
         INSERT INTO obras (
@@ -321,7 +325,7 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
-      db.run(
+      database.run(
         queryObra,
         [
           noSig,                               // usa el valor original (no el saneado) para DB
@@ -346,7 +350,7 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
         ],
         function (err) {
           if (err) {
-            db.run("ROLLBACK");
+            database.run("ROLLBACK");
             let userMessage = "Ocurrió un error al guardar la obra";
             if (err.message.includes("UNIQUE constraint failed: obras.no_sigropam")) {
               userMessage = "El número SIGROPAM ya existe en el sistema. Verifique e intente con uno diferente.";
@@ -377,7 +381,7 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
 
           // Si no hay ubicaciones ni exposiciones, hacer commit
           if (ubicaciones.length === 0 && exposiciones.length === 0) {
-            db.run("COMMIT");
+            database.run("COMMIT");
             return resolve({ success: true, id: idObra });
           }
 
@@ -386,18 +390,18 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
 
           // Guardar ubicaciones topológicas
           ubicaciones.forEach(u => {
-            db.run(queryUbicacion, [idObra, u.id, u.nivel], (err2) => {
+            database.run(queryUbicacion, [idObra, u.id, u.nivel], (err2) => {
               if (err2) huboError = true;
               pendientes -= 1;
 
               if (pendientes === 0) {
                 if (huboError) {
-                  db.run("ROLLBACK");
+                  database.run("ROLLBACK");
                   // Limpieza de carpetas creadas
                   createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
                   return resolve({ success: false, error: "Error al guardar ubicaciones o exposiciones" });
                 } else {
-                  db.run("COMMIT");
+                  database.run("COMMIT");
                   return resolve({ success: true, id: idObra });
                 }
               }
@@ -406,18 +410,18 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
 
           // Guardar exposiciones
           exposiciones.forEach(expo => {
-            db.run(queryExposicion, [idObra, expo.trim()], (err2) => {
+            database.run(queryExposicion, [idObra, expo.trim()], (err2) => {
               if (err2) huboError = true;
               pendientes -= 1;
 
               if (pendientes === 0) {
                 if (huboError) {
-                  db.run("ROLLBACK");
+                  database.run("ROLLBACK");
                   // Limpieza de carpetas creadas
                   createdDirs.reverse().forEach(d => { try { fs.rmSync(d, { recursive: true, force: true }); } catch { } });
                   return resolve({ success: false, error: "Error al guardar ubicaciones o exposiciones" });
                 } else {
-                  db.run("COMMIT");
+                  database.run("COMMIT");
                   return resolve({ success: true, id: idObra });
                 }
               }
@@ -432,25 +436,77 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
 //ventana de login
 ipcMain.handle("login", async (event, usuario, password) => {
   return new Promise((resolve) => {
-    const sql = `SELECT * FROM usuarios WHERE usuario = ?`;
-    db.get(sql, [usuario], (err, row) => {
-      if (err) {
-        resolve({ success: false, error: "Error interno de base de datos" });
-      } else if (!row) {
-        resolve({ success: false, error: "Usuario no encontrado" });
-      } else {
-        if (row.password === password) { // ⚠️ luego cambiamos a bcrypt
-          currentUserRole = row.rol; 
-          console.log(currentUserRole);
-          setMenuByRole(currentUserRole, global.mainWindow);
-          // Según el rol, cargar búsqueda
-          cargarBusqueda();
-          resolve({ success: true, rol: row.rol });
-        } else {
-          resolve({ success: false, error: "Contraseña incorrecta" });
-        }
+    try {
+      const sql = `SELECT * FROM usuarios WHERE usuario = ?`;
+      const database = getDatabase();
+      
+      // Verificar que la base de datos esté inicializada
+      if (!database) {
+        console.error('Error: Base de datos no inicializada');
+        return resolve({ success: false, error: "Error interno: Base de datos no inicializada" });
       }
-    });
+      
+      database.get(sql, [usuario], (err, row) => {
+        if (err) {
+          console.error('Error en consulta de login:', err);
+          console.error('Mensaje de error:', err.message);
+          console.error('Código de error:', err.code);
+          
+          // Verificar si el error es porque la tabla no existe
+          if (err.message && err.message.includes('no such table')) {
+            console.error('La tabla usuarios no existe. Ejecutando schema...');
+            // Intentar ejecutar el schema
+            const { initializeDatabase } = require("./src/database");
+            const pathsModule = require("./src/paths");
+            const dbPath = pathsModule.getDatabasePath();
+            try {
+              initializeDatabase(() => dbPath);
+              // Reintentar la consulta después de un breve delay
+              setTimeout(() => {
+                database.get(sql, [usuario], (err2, row2) => {
+                  if (err2) {
+                    resolve({ success: false, error: "Error interno de base de datos. Por favor, reinicie la aplicación." });
+                  } else if (!row2) {
+                    resolve({ success: false, error: "Usuario no encontrado" });
+                  } else {
+                    if (row2.password === password) {
+                      currentUserRole = row2.rol; 
+                      console.log(currentUserRole);
+                      setMenuByRole(currentUserRole, global.mainWindow);
+                      cargarBusqueda();
+                      resolve({ success: true, rol: row2.rol });
+                    } else {
+                      resolve({ success: false, error: "Contraseña incorrecta" });
+                    }
+                  }
+                });
+              }, 500);
+            } catch (schemaErr) {
+              console.error('Error ejecutando schema:', schemaErr);
+              resolve({ success: false, error: "Error interno: No se pudo inicializar la base de datos" });
+            }
+          } else {
+            resolve({ success: false, error: "Error interno de base de datos" });
+          }
+        } else if (!row) {
+          resolve({ success: false, error: "Usuario no encontrado" });
+        } else {
+          if (row.password === password) { // ⚠️ luego cambiamos a bcrypt
+            currentUserRole = row.rol; 
+            console.log(currentUserRole);
+            setMenuByRole(currentUserRole, global.mainWindow);
+            // Según el rol, cargar búsqueda
+            cargarBusqueda();
+            resolve({ success: true, rol: row.rol });
+          } else {
+            resolve({ success: false, error: "Contraseña incorrecta" });
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error crítico en login:', error);
+      resolve({ success: false, error: "Error crítico: " + error.message });
+    }
   });
 });
 
@@ -473,39 +529,40 @@ ipcMain.handle("eliminar-obra", async (event, idObra) => {
       return resolve({ success: false, error: "ID de obra inválido" });
     }
 
-    db.serialize(() => {
-      db.run("BEGIN TRANSACTION");
+    const database = getDatabase();
+    database.serialize(() => {
+      database.run("BEGIN TRANSACTION");
 
       // 1. Obtener rutas de imágenes antes de eliminar
-      db.get("SELECT path_img_baja, path_img_alta FROM obras WHERE id_obra = ?", [id], (err, obra) => {
+      database.get("SELECT path_img_baja, path_img_alta FROM obras WHERE id_obra = ?", [id], (err, obra) => {
         if (err) {
-          db.run("ROLLBACK");
+          database.run("ROLLBACK");
           return resolve({ success: false, error: "Error al obtener datos de la obra" });
         }
 
         if (!obra) {
-          db.run("ROLLBACK");
+          database.run("ROLLBACK");
           return resolve({ success: false, error: "Obra no encontrada" });
         }
 
         // 2. Eliminar exposiciones asociadas
-        db.run("DELETE FROM exposiciones WHERE id_obra = ?", [id], (err) => {
+        database.run("DELETE FROM exposiciones WHERE id_obra = ?", [id], (err) => {
           if (err) {
-            db.run("ROLLBACK");
+            database.run("ROLLBACK");
             return resolve({ success: false, error: "Error al eliminar exposiciones" });
           }
 
           // 3. Eliminar ubicaciones topológicas asociadas
-          db.run("DELETE FROM obra_ubicaciones_topologicas WHERE id_obra = ?", [id], (err) => {
+          database.run("DELETE FROM obra_ubicaciones_topologicas WHERE id_obra = ?", [id], (err) => {
             if (err) {
-              db.run("ROLLBACK");
+              database.run("ROLLBACK");
               return resolve({ success: false, error: "Error al eliminar ubicaciones topológicas" });
             }
 
             // 4. Eliminar la obra
-            db.run("DELETE FROM obras WHERE id_obra = ?", [id], (err) => {
+            database.run("DELETE FROM obras WHERE id_obra = ?", [id], (err) => {
               if (err) {
-                db.run("ROLLBACK");
+                database.run("ROLLBACK");
                 return resolve({ success: false, error: "Error al eliminar la obra" });
               }
 
@@ -522,7 +579,7 @@ ipcMain.handle("eliminar-obra", async (event, idObra) => {
                 // No fallar la transacción por esto, solo loguear
               }
 
-              db.run("COMMIT");
+              database.run("COMMIT");
               return resolve({ success: true });
             });
           });
@@ -976,7 +1033,8 @@ ipcMain.handle("insert-artista", async (event, artista) => {
   return new Promise((resolve) => {
     const sqlCheck = `SELECT COUNT(*) as count FROM artistas 
                       WHERE nombre = ? AND apellido_paterno = ? AND apellido_materno = ?`;
-    db.get(sqlCheck, [nombre, apellido_paterno, apellido_materno], (err, row) => {
+    const database = getDatabase();
+    database.get(sqlCheck, [nombre, apellido_paterno, apellido_materno], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "El artista ya existe." });
@@ -984,7 +1042,7 @@ ipcMain.handle("insert-artista", async (event, artista) => {
 
       const sqlInsert = `INSERT INTO artistas (nombre, apellido_paterno, apellido_materno) 
                          VALUES (?, ?, ?)`;
-      db.run(sqlInsert, [nombre, apellido_paterno, apellido_materno], function (err2) {
+      database.run(sqlInsert, [nombre, apellido_paterno, apellido_materno], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al insertar" });
         resolve({ success: true, id: this.lastID });
       });
@@ -1065,7 +1123,8 @@ ipcMain.handle("update-artista", async (event, idArtista, datos) => {
     const sqlCheck = `SELECT COUNT(*) as count FROM artistas 
                       WHERE nombre = ? AND apellido_paterno = ? AND apellido_materno = ?
                       AND id_artista != ?`;
-    db.get(sqlCheck, [nombre, apellido_paterno, apellido_materno, idArtista], (err, row) => {
+    const database = getDatabase();
+    database.get(sqlCheck, [nombre, apellido_paterno, apellido_materno, idArtista], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "Ya existe otro artista con estos datos." });
@@ -1074,7 +1133,7 @@ ipcMain.handle("update-artista", async (event, idArtista, datos) => {
       const sqlUpdate = `UPDATE artistas 
                          SET nombre = ?, apellido_paterno = ?, apellido_materno = ?
                          WHERE id_artista = ?`;
-      db.run(sqlUpdate, [nombre, apellido_paterno, apellido_materno, idArtista], function (err2) {
+      database.run(sqlUpdate, [nombre, apellido_paterno, apellido_materno, idArtista], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al actualizar" });
         resolve({ success: true });
       });
@@ -1098,7 +1157,8 @@ ipcMain.on("eliminar-artista", (event, idArtista) => {
   }
 
   // Verificar existencia del artista
-  db.get(
+  const database = getDatabase();
+  database.get(
     "SELECT id_artista FROM artistas WHERE id_artista = ?",
     [artistaId],
     (err, row) => {
@@ -1122,7 +1182,8 @@ ipcMain.on("eliminar-artista", (event, idArtista) => {
       }
 
       // Obtener nombre del artista para la confirmación
-      db.get(
+      const database = getDatabase();
+  database.get(
         "SELECT nombre, apellido_paterno, apellido_materno FROM artistas WHERE id_artista = ?",
         [artistaId],
         (errNombre, rowNombre) => {
@@ -1141,7 +1202,8 @@ ipcMain.on("eliminar-artista", (event, idArtista) => {
             : "este artista";
 
           // Verificar que no tenga obras asociadas
-          db.get(
+          const database = getDatabase();
+  database.get(
             "SELECT COUNT(*) AS cnt FROM obras WHERE id_artista = ?",
             [artistaId],
             (err2, rowCnt) => {
@@ -1179,7 +1241,8 @@ ipcMain.on("eliminar-artista", (event, idArtista) => {
                 }
 
                 // Eliminar artista
-                db.run(
+                const database = getDatabase();
+    database.run(
                   "DELETE FROM artistas WHERE id_artista = ?",
                   [artistaId],
                   function (err3) {
@@ -1225,14 +1288,16 @@ ipcMain.on("artista-agregado", () => {
 ipcMain.handle("insert-tecnica", async (event, tecnica) => {
   return new Promise((resolve) => {
     const sqlCheck = `SELECT COUNT(*) as count FROM tecnicas WHERE tecnica = ?`;
-    db.get(sqlCheck, [tecnica], (err, row) => {
+    const database = getDatabase();
+  database.get(sqlCheck, [tecnica], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "La técnica ya existe." });
       }
 
       const sqlInsert = `INSERT INTO tecnicas (tecnica) VALUES (?)`;
-      db.run(sqlInsert, [tecnica], function (err2) {
+      const database = getDatabase();
+    database.run(sqlInsert, [tecnica], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al insertar" });
         resolve({ success: true, id: this.lastID });
       });
@@ -1309,14 +1374,16 @@ ipcMain.handle("update-tecnica", async (event, idTecnica, tecnica) => {
   return new Promise((resolve) => {
     // Verificar que no exista otra técnica con el mismo nombre (excepto la actual)
     const sqlCheck = `SELECT COUNT(*) as count FROM tecnicas WHERE tecnica = ? AND id_tecnica != ?`;
-    db.get(sqlCheck, [tecnica, idTecnica], (err, row) => {
+    const database = getDatabase();
+  database.get(sqlCheck, [tecnica, idTecnica], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "Ya existe otra técnica con este nombre." });
       }
 
       const sqlUpdate = `UPDATE tecnicas SET tecnica = ? WHERE id_tecnica = ?`;
-      db.run(sqlUpdate, [tecnica, idTecnica], function (err2) {
+      const database = getDatabase();
+    database.run(sqlUpdate, [tecnica, idTecnica], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al actualizar" });
         resolve({ success: true });
       });
@@ -1346,7 +1413,8 @@ ipcMain.on("eliminar-tecnica", (event, idTecnica) => {
   }
 
   // Verificar existencia de la técnica
-  db.get(
+  const database = getDatabase();
+  database.get(
     "SELECT tecnica FROM tecnicas WHERE id_tecnica = ?",
     [tecnicaId],
     (err, row) => {
@@ -1372,7 +1440,8 @@ ipcMain.on("eliminar-tecnica", (event, idTecnica) => {
       const nombreTecnica = row.tecnica;
 
       // Verificar que no tenga obras asociadas
-      db.get(
+      const database = getDatabase();
+  database.get(
         "SELECT COUNT(*) AS cnt FROM obras WHERE id_tecnica = ?",
         [tecnicaId],
         (err2, rowCnt) => {
@@ -1409,7 +1478,8 @@ ipcMain.on("eliminar-tecnica", (event, idTecnica) => {
             }
 
             // Eliminar técnica
-            db.run(
+            const database = getDatabase();
+    database.run(
               "DELETE FROM tecnicas WHERE id_tecnica = ?",
               [tecnicaId],
               function (err3) {
@@ -1448,14 +1518,16 @@ ipcMain.on("eliminar-tecnica", (event, idTecnica) => {
 ipcMain.handle("insert-topografica", async (event, ubicacion) => {
   return new Promise((resolve) => {
     const sqlCheck = `SELECT COUNT(*) as count FROM ubicaciones_topograficas WHERE ubicacion = ?`;
-    db.get(sqlCheck, [ubicacion], (err, row) => {
+    const database = getDatabase();
+  database.get(sqlCheck, [ubicacion], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "La ubicación ya existe." });
       }
 
       const sqlInsert = `INSERT INTO ubicaciones_topograficas (ubicacion) VALUES (?)`;
-      db.run(sqlInsert, [ubicacion], function (err2) {
+      const database = getDatabase();
+    database.run(sqlInsert, [ubicacion], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al insertar" });
         resolve({ success: true, id: this.lastID });
       });
@@ -1532,14 +1604,16 @@ ipcMain.handle("update-topografica", async (event, idTopografica, ubicacion) => 
   return new Promise((resolve) => {
     // Verificar que no exista otra ubicación topográfica con el mismo nombre (excepto la actual)
     const sqlCheck = `SELECT COUNT(*) as count FROM ubicaciones_topograficas WHERE ubicacion = ? AND id_ubicacion_topografica != ?`;
-    db.get(sqlCheck, [ubicacion, idTopografica], (err, row) => {
+    const database = getDatabase();
+  database.get(sqlCheck, [ubicacion, idTopografica], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "Ya existe otra ubicación topográfica con este nombre." });
       }
 
       const sqlUpdate = `UPDATE ubicaciones_topograficas SET ubicacion = ? WHERE id_ubicacion_topografica = ?`;
-      db.run(sqlUpdate, [ubicacion, idTopografica], function (err2) {
+      const database = getDatabase();
+    database.run(sqlUpdate, [ubicacion, idTopografica], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al actualizar" });
         resolve({ success: true });
       });
@@ -1568,7 +1642,8 @@ ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
   }
 
   // Verificar existencia y nombre
-  db.get(
+  const database = getDatabase();
+  database.get(
     "SELECT tipo FROM tipo_ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
     [tipoId],
     (err, rowTipo) => {
@@ -1601,7 +1676,8 @@ ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
           SELECT id_ubicacion_topologica FROM ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?
         )
       `;
-      db.get(sqlUso, [tipoId], (errUso, rowUso) => {
+      const database = getDatabase();
+  database.get(sqlUso, [tipoId], (errUso, rowUso) => {
         if (errUso) {
           console.error("Error verificando uso de ubicaciones del tipo:", errUso);
           dialog.showMessageBox(win, {
@@ -1631,15 +1707,16 @@ ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
         }).then((result) => {
           if (result.response === 0) return;
 
-          db.serialize(() => {
-            db.run("BEGIN TRANSACTION");
-            db.run(
+          const database = getDatabase();
+          database.serialize(() => {
+            database.run("BEGIN TRANSACTION");
+            database.run(
               "DELETE FROM ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
               [tipoId],
               (errDelUbi) => {
                 if (errDelUbi) {
                   console.error("Error eliminando ubicaciones del tipo:", errDelUbi);
-                  db.run("ROLLBACK");
+                  database.run("ROLLBACK");
                   dialog.showMessageBox(win, {
                     type: "error",
                     title: "Eliminar tipo",
@@ -1648,13 +1725,14 @@ ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
                   return;
                 }
 
-                db.run(
+                const database = getDatabase();
+    database.run(
                   "DELETE FROM tipo_ubicaciones_topologicas WHERE id_tipo_ubicacion_topologica = ?",
                   [tipoId],
                   (errDelTipo) => {
                     if (errDelTipo) {
                       console.error("Error eliminando tipo topológico:", errDelTipo);
-                      db.run("ROLLBACK");
+                      database.run("ROLLBACK");
                       dialog.showMessageBox(win, {
                         type: "error",
                         title: "Eliminar tipo",
@@ -1663,7 +1741,7 @@ ipcMain.on("eliminar-tipo-topologico", (event, idTipo) => {
                       return;
                     }
 
-                    db.run("COMMIT");
+                    database.run("COMMIT");
                     dialog.showMessageBox(win, {
                       type: "info",
                       title: "Eliminar tipo",
@@ -1702,7 +1780,8 @@ ipcMain.on("eliminar-topografica", (event, idTopografica) => {
   }
 
   // Verificar existencia de la ubicación topográfica
-  db.get(
+  const database = getDatabase();
+  database.get(
     "SELECT ubicacion FROM ubicaciones_topograficas WHERE id_ubicacion_topografica = ?",
     [topograficaId],
     (err, row) => {
@@ -1728,7 +1807,8 @@ ipcMain.on("eliminar-topografica", (event, idTopografica) => {
       const nombreTopografica = row.ubicacion;
 
       // Verificar que no tenga obras asociadas
-      db.get(
+      const database = getDatabase();
+  database.get(
         "SELECT COUNT(*) AS cnt FROM obras WHERE id_ubicacion_topografica = ?",
         [topograficaId],
         (err2, rowCnt) => {
@@ -1765,7 +1845,8 @@ ipcMain.on("eliminar-topografica", (event, idTopografica) => {
             }
 
             // Eliminar ubicación topográfica
-            db.run(
+            const database = getDatabase();
+    database.run(
               "DELETE FROM ubicaciones_topograficas WHERE id_ubicacion_topografica = ?",
               [topograficaId],
               function (err3) {
@@ -1806,11 +1887,13 @@ ipcMain.handle("insert-ubicacion-topologica", async (event, data) => {
   return new Promise((resolve) => {
     // 1. Insertar/validar tipo
     const sqlTipo = `INSERT OR IGNORE INTO tipo_ubicaciones_topologicas (tipo) VALUES (?)`;
-    db.run(sqlTipo, [tipo], function (err) {
+    const database = getDatabase();
+    database.run(sqlTipo, [tipo], function (err) {
       if (err) return resolve({ success: false, error: "Error en tipo" });
 
       // Recuperar id_tipo (sea recién insertado o existente)
-      db.get(
+      const database = getDatabase();
+  database.get(
         `SELECT id_tipo_ubicacion_topologica FROM tipo_ubicaciones_topologicas WHERE tipo = ?`,
         [tipo],
         (err2, row) => {
@@ -1827,10 +1910,12 @@ ipcMain.handle("insert-ubicacion-topologica", async (event, data) => {
             const sqlCheck = `SELECT COUNT(*) as count 
                               FROM ubicaciones_topologicas 
                               WHERE id_tipo_ubicacion_topologica = ? AND ubicacion = ?`;
-            db.get(sqlCheck, [idTipo, u.trim()], (err3, row2) => {
+            const database = getDatabase();
+  database.get(sqlCheck, [idTipo, u.trim()], (err3, row2) => {
               if (err3) errores = true;
               if (row2.count === 0) {
-                db.run(
+                const database = getDatabase();
+    database.run(
                   `INSERT INTO ubicaciones_topologicas (id_tipo_ubicacion_topologica, ubicacion) VALUES (?, ?)`,
                   [idTipo, u.trim()]
                 );
@@ -1919,14 +2004,16 @@ ipcMain.handle("insert-ubicacion-topologica-individual", async (event, idTipo, u
     const sqlCheck = `SELECT COUNT(*) as count 
                       FROM ubicaciones_topologicas 
                       WHERE id_tipo_ubicacion_topologica = ? AND ubicacion = ?`;
-    db.get(sqlCheck, [idTipo, ubicacion.trim()], (err, row) => {
+    const database = getDatabase();
+  database.get(sqlCheck, [idTipo, ubicacion.trim()], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "Ya existe una ubicación con este nombre en este tipo." });
       }
 
       const sqlInsert = `INSERT INTO ubicaciones_topologicas (id_tipo_ubicacion_topologica, ubicacion) VALUES (?, ?)`;
-      db.run(sqlInsert, [idTipo, ubicacion.trim()], function (err2) {
+      const database = getDatabase();
+    database.run(sqlInsert, [idTipo, ubicacion.trim()], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al insertar" });
         resolve({ success: true, id: this.lastID });
       });
@@ -1985,7 +2072,8 @@ ipcMain.on("abrir-editar-ubicacion-topologica-individual", async (event, idUbica
 ipcMain.handle("update-ubicacion-topologica-individual", async (event, idUbicacion, ubicacion) => {
   return new Promise((resolve) => {
     // Obtener el tipo de la ubicación actual
-    db.get(
+    const database = getDatabase();
+  database.get(
       "SELECT id_tipo_ubicacion_topologica FROM ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
       [idUbicacion],
       (err, row) => {
@@ -1998,14 +2086,16 @@ ipcMain.handle("update-ubicacion-topologica-individual", async (event, idUbicaci
         const sqlCheck = `SELECT COUNT(*) as count 
                           FROM ubicaciones_topologicas 
                           WHERE id_tipo_ubicacion_topologica = ? AND ubicacion = ? AND id_ubicacion_topologica != ?`;
-        db.get(sqlCheck, [idTipo, ubicacion.trim(), idUbicacion], (err2, row2) => {
+        const database = getDatabase();
+  database.get(sqlCheck, [idTipo, ubicacion.trim(), idUbicacion], (err2, row2) => {
           if (err2) return resolve({ success: false, error: "Error en DB" });
           if (row2.count > 0) {
             return resolve({ success: false, error: "Ya existe otra ubicación con este nombre en este tipo." });
           }
 
           const sqlUpdate = `UPDATE ubicaciones_topologicas SET ubicacion = ? WHERE id_ubicacion_topologica = ?`;
-          db.run(sqlUpdate, [ubicacion.trim(), idUbicacion], function (err3) {
+          const database = getDatabase();
+    database.run(sqlUpdate, [ubicacion.trim(), idUbicacion], function (err3) {
             if (err3) return resolve({ success: false, error: "Error al actualizar" });
             resolve({ success: true });
           });
@@ -2067,14 +2157,16 @@ ipcMain.handle("update-tipo-topologico", async (event, idTipo, tipo) => {
   return new Promise((resolve) => {
     // Verificar que no exista otro tipo con el mismo nombre (excepto el actual)
     const sqlCheck = `SELECT COUNT(*) as count FROM tipo_ubicaciones_topologicas WHERE tipo = ? AND id_tipo_ubicacion_topologica != ?`;
-    db.get(sqlCheck, [tipo, idTipo], (err, row) => {
+    const database = getDatabase();
+  database.get(sqlCheck, [tipo, idTipo], (err, row) => {
       if (err) return resolve({ success: false, error: "Error en DB" });
       if (row.count > 0) {
         return resolve({ success: false, error: "Ya existe otro tipo con este nombre." });
       }
 
       const sqlUpdate = `UPDATE tipo_ubicaciones_topologicas SET tipo = ? WHERE id_tipo_ubicacion_topologica = ?`;
-      db.run(sqlUpdate, [tipo, idTipo], function (err2) {
+      const database = getDatabase();
+    database.run(sqlUpdate, [tipo, idTipo], function (err2) {
         if (err2) return resolve({ success: false, error: "Error al actualizar" });
         resolve({ success: true });
       });
@@ -2105,7 +2197,8 @@ ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
   }
 
   // Verificar existencia de la ubicación topológica
-  db.get(
+  const database = getDatabase();
+  database.get(
     `SELECT ut.ubicacion, tut.tipo 
      FROM ubicaciones_topologicas ut
      JOIN tipo_ubicaciones_topologicas tut ON ut.id_tipo_ubicacion_topologica = tut.id_tipo_ubicacion_topologica
@@ -2134,7 +2227,8 @@ ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
       const nombreUbicacion = `${row.tipo} - ${row.ubicacion}`;
 
       // Verificar que no tenga obras asociadas
-      db.get(
+      const database = getDatabase();
+  database.get(
         "SELECT COUNT(*) AS cnt FROM obra_ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
         [ubicacionTopologicaId],
         (err2, rowCnt) => {
@@ -2171,7 +2265,8 @@ ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
             }
 
             // Eliminar ubicación topológica
-            db.run(
+            const database = getDatabase();
+    database.run(
               "DELETE FROM ubicaciones_topologicas WHERE id_ubicacion_topologica = ?",
               [ubicacionTopologicaId],
               function (err3) {
@@ -2208,5 +2303,39 @@ ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
 
 
 
-app.whenReady().then(createWindow);
+// Inicializar aplicación
+app.whenReady().then(async () => {
+  // Inicializar módulo de rutas
+  const pathsModule = require("./src/paths");
+  pathsModule.initializeApp(app);
+  
+  // Migrar datos si es necesario (solo en producción)
+  pathsModule.migrateDataIfNeeded();
+  
+  // Inicializar base de datos
+  const dbPath = pathsModule.getDatabasePath();
+  try {
+    db = initializeDatabase(() => dbPath);
+    console.log('Base de datos inicializada correctamente');
+    console.log('📍 Ubicación de la base de datos:', dbPath);
+    console.log('💡 Para acceder manualmente, ve a:', dbPath);
+  } catch (error) {
+    console.error('Error crítico al inicializar la base de datos:', error);
+    // Mostrar error al usuario
+    dialog.showErrorBox(
+      'Error de Inicialización',
+      'No se pudo inicializar la base de datos. Por favor, verifique los permisos y reinicie la aplicación.\n\nError: ' + error.message
+    );
+    app.quit();
+    return;
+  }
+  
+  // Crear ventana
+  createWindow();
+});
 
+// IPC handler para obtener la ruta de la base de datos (útil para depuración)
+ipcMain.handle("get-database-path", async () => {
+  const { getDatabasePath } = require("./src/database");
+  return getDatabasePath();
+});

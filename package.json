@@ -5,7 +5,11 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "node build-skip-signing.js",
+    "build:win-installer": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_CSC_LINK= electron-builder --win",
+    "dist": "electron-builder --publish=never"
   },
   "repository": {
     "type": "git",
@@ -18,14 +22,59 @@
   },
   "homepage": "https://github.com/Ricardohp22/Munae#readme",
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "electron": "^38.1.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
     "archiver": "^7.0.1",
+    "archiver-utils": "^5.0.2",
     "better-sqlite3": "^12.2.0",
     "bootstrap": "^5.3.8",
     "pdfkit": "^0.17.2",
     "sqlite3": "^5.1.7"
+  },
+  "build": {
+    "appId": "com.munae.app",
+    "productName": "MUNAE",
+    "disableSanityCheckAsar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "assets/**/*",
+      "data/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/archiver/**",
+      "**/node_modules/archiver-utils/**",
+      "**/node_modules/zip-stream/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "sign": false,
+      "forceCodeSigning": false,
+      "signingHashAlgorithms": [],
+      "verifyUpdateCodeSignature": false,
+      "certificateFile": null,
+      "certificatePassword": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
