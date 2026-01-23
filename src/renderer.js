@@ -241,7 +241,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.precargarUltimaObra = async function() {
       try {
         const ultimaObra = await window.electronAPI.getUltimaObra();
-        if (!ultimaObra) return;
+        if (!ultimaObra) {
+          // Asegurarse de que todos los campos estén habilitados incluso si no hay última obra
+          const allInputs = document.querySelectorAll('#form-obra input, #form-obra select, #form-obra textarea');
+          allInputs.forEach(input => {
+            input.disabled = false;
+            input.readOnly = false;
+          });
+          return;
+        }
 
         // Obtener datos actualizados de selects (solo los necesarios)
         const [artistasActualizados, tecnicasActualizadas, topograficasActualizadas] = await Promise.all([
@@ -278,8 +286,21 @@ document.addEventListener('DOMContentLoaded', async () => {
           listaExposiciones = [];
           renderizarExposiciones();
         }
+        
+        // Asegurarse de que todos los campos estén habilitados después de precargar
+        const allInputs = document.querySelectorAll('#form-obra input, #form-obra select, #form-obra textarea');
+        allInputs.forEach(input => {
+          input.disabled = false;
+          input.readOnly = false;
+        });
       } catch (err) {
         console.error('Error precargando última obra:', err);
+        // Asegurarse de que todos los campos estén habilitados incluso si hay error
+        const allInputs = document.querySelectorAll('#form-obra input, #form-obra select, #form-obra textarea');
+        allInputs.forEach(input => {
+          input.disabled = false;
+          input.readOnly = false;
+        });
       }
     };
 
@@ -376,7 +397,19 @@ function renderizarExposiciones() {
 
 //hacer validacion al dar click en guardar
 document.getElementById("btnGuardar").addEventListener("click", async () => {
-  const datos = {
+  const btnGuardar = document.getElementById("btnGuardar");
+  
+  // Prevenir múltiples clics mientras se está guardando
+  if (btnGuardar.disabled) {
+    return;
+  }
+  
+  // Deshabilitar botón temporalmente durante el guardado
+  btnGuardar.disabled = true;
+  btnGuardar.textContent = "Guardando...";
+  
+  try {
+    const datos = {
     id_artista: document.getElementById("id_artista").value,
     id_sigropam: document.getElementById("sigropam").value,
     titulo: document.getElementById("titulo").value,
@@ -404,7 +437,9 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
   if (errores.length) {
     //alert("Errores:\n" + errores.join("\n"));
     mostrarMensaje("Errores:\n " + errores.join("\n"), "error");
-
+    // Rehabilitar botón si hay errores de validación
+    btnGuardar.disabled = false;
+    btnGuardar.textContent = "Guardar Obra";
     return;
   } else {
     console.log('datos validados:', datos);
@@ -413,21 +448,80 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
   // Enviar a main.js
   const resultado = await window.electronAPI.guardarObra(datos);
   if (resultado.success) {
-    alert("Obra guardada exitosamente");
-    mostrarMensaje("¡Registro exitoso!", "exito");
+    // Primero hacer todas las operaciones de reset y habilitación
     document.getElementById("form-obra").reset();
     imgsBaja = []; imgsAlta = [];
     listaExposiciones = []; // Limpiar lista de exposiciones
     renderizarExposiciones(); // Actualizar visualización
     renderAllLists();
+    
+    // Asegurarse de que todos los campos estén habilitados después del reset
+    const allInputs = document.querySelectorAll('#form-obra input, #form-obra select, #form-obra textarea');
+    allInputs.forEach(input => {
+      input.disabled = false;
+      input.readOnly = false;
+    });
+    
+    // Reiniciar selects de ubicación topológica a su estado inicial
+    const selUbiGeneral = document.getElementById("ubi_general");
+    const selUbiSub = document.getElementById("ubi_sub");
+    const selUbiSub2 = document.getElementById("ubi_sub2");
+    const selTipoGeneral = document.getElementById("ubi_general_tipo");
+    const selTipoSub = document.getElementById("ubi_sub_tipo");
+    const selTipoSub2 = document.getElementById("ubi_sub2_tipo");
+    
+    // Limpiar y resetear selects de ubicación topológica
+    if (selTipoGeneral) selTipoGeneral.value = "";
+    if (selTipoSub) selTipoSub.value = "";
+    if (selTipoSub2) selTipoSub2.value = "";
+    
+    if (selUbiGeneral) {
+      populateSelectWithPlaceholder(selUbiGeneral, "Seleccione tipo primero");
+      selUbiGeneral.disabled = true;
+    }
+    if (selUbiSub) {
+      populateSelectWithPlaceholder(selUbiSub, "Seleccione tipo primero");
+      selUbiSub.disabled = true;
+    }
+    if (selUbiSub2) {
+      populateSelectWithPlaceholder(selUbiSub2, "Seleccione tipo primero");
+      selUbiSub2.disabled = true;
+    }
+    
+    // Asegurarse de que el botón de guardar esté habilitado
+    const btnGuardar = document.getElementById("btnGuardar");
+    if (btnGuardar) {
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = "Guardar Obra";
+    }
+    
     // Precargar con la última obra guardada (que acabamos de guardar)
     if (window.precargarUltimaObra) {
       await window.precargarUltimaObra();
     }
+    
+    // Mostrar mensaje visual
+    mostrarMensaje("¡Registro exitoso!", "exito");
+    
+    // Restaurar el foco al primer campo del formulario
+    setTimeout(() => {
+      const primerCampo = document.getElementById("titulo");
+      if (primerCampo) {
+        primerCampo.focus();
+      }
+    }, 100);
   } else {
-    alert("Error al guardar la obra");
     mostrarMensaje("Error al guardar la obra: " + resultado.error, "error");
     //console.log(resultado.error);
+  }
+  } finally {
+    // Rehabilitar botón después de completar (éxito o error)
+    // Solo si aún está deshabilitado (no se rehabilitó en el bloque de éxito)
+    const btnGuardarFinal = document.getElementById("btnGuardar");
+    if (btnGuardarFinal && btnGuardarFinal.disabled) {
+      btnGuardarFinal.disabled = false;
+      btnGuardarFinal.textContent = "Guardar Obra";
+    }
   }
 });
 
