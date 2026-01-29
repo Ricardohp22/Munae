@@ -1002,29 +1002,106 @@ ipcMain.handle("descargar-obra", async (event, idObra) => {
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(output);
 
-    // 4. Crear PDF de la ficha
+    // 4. Crear PDF de la ficha (marca de agua, sin usar 19% superior, estilo estructurado, paginación)
     const pdfPath = path.join(app.getPath("temp"), `${o.no_sigropam}_ficha.pdf`);
+    const marcaAguaPath = path.join(app.getAppPath(), "assets", "marca_agua.png");
+    const tieneMarcaAgua = fs.existsSync(marcaAguaPath);
+
     await new Promise((resolve, reject) => {
-      const doc = new PDFDocument();
+      const doc = new PDFDocument({ size: "A4", margin: 0 });
       const stream = fs.createWriteStream(pdfPath);
       doc.pipe(stream);
 
-      doc.fontSize(16).text("Ficha Técnica de Obra", { align: "center" }).moveDown();
-      doc.fontSize(12).text(`No. SIGROPAM: ${o.no_sigropam}`);
-      doc.text(`Artista: ${o.apellido_paterno || ""} ${o.apellido_materno || ""}, ${o.artista_nombre}`);
-      doc.text(`Título: ${o.titulo}`);
-      doc.text(`Fecha: ${o.fecha}`);
-      doc.text(`Técnica: ${o.tecnica || ""}`);
-      doc.text(`Tiraje: ${o.tiraje || ""}`);
-      doc.text(`Medidas soporte: ${o.medidas_soporte_largo || ""} x ${o.medidas_soporte_ancho || ""} x ${o.medidas_soporte_profundidad || ""} cm (Alto x Ancho x Prof.)`);
-      doc.text(`Medidas imagen: ${o.medidas_imagen_largo || ""} x ${o.medidas_imagen_ancho || ""} x ${o.medidas_imagen_profundidad || ""} cm (Alto x Ancho x Prof.)`);
-      doc.text(`Medidas marco: ${o.medidas_marco_largo || ""} x ${o.medidas_marco_ancho || ""} x ${o.medidas_marco_profundidad || ""} cm (Alto x Ancho x Prof.)`);
-      doc.text(`Ubicación topológica: ${ubicacionesTopo.map(u => `${u.tipo} - ${u.ubicacion}`).join(", ")}`);
-      doc.text(`Ubicación topográfica: ${o.ubi_topografica || ""}`);
-      doc.text(`Observaciones: ${o.observaciones || ""}`);
-      doc.text(`Estado de conservación: ${o.estado_conservacion || ""}`);
-      doc.text(`Descripción: ${o.descripcion || ""}`);
-      doc.text(`Exposiciones: ${exposiciones.length > 0 ? exposiciones.map(e => e.exposicion).join(", ") : ""}`);
+      const pageWidth = doc.page.width;
+      const pageHeight = doc.page.height;
+      const topReserved = pageHeight * 0.19;   // 19% superior libre (info de la marca de agua)
+      const contentTop = topReserved;
+      const marginH = 50;
+      const contentWidth = pageWidth - marginH * 2;
+      const contentEndY = pageHeight - 45;
+      const lineHeight = 14;
+      const fontSize = 12;
+
+      function drawWatermark() {
+        if (tieneMarcaAgua) {
+          try {
+            doc.image(marcaAguaPath, 0, 0, { width: pageWidth, height: pageHeight });
+          } catch (e) {
+            console.warn("No se pudo cargar marca de agua:", e.message);
+          }
+        }
+      }
+
+      function checkNewPage(neededLines = 2) {
+        if (doc.y + neededLines * lineHeight > contentEndY) {
+          doc.addPage({ size: "A4", margin: 0 });
+          drawWatermark();
+          doc.y = contentTop;
+        }
+      }
+
+      function writeLine(label, value) {
+        const valueStr = value != null && String(value).trim() !== "" ? String(value).trim() : "—";
+        const lineText = label + " " + valueStr;
+        checkNewPage();
+        doc.font("Helvetica").fontSize(fontSize);
+        const blockHeight = doc.heightOfString(lineText, { width: contentWidth }) + 4;
+        if (doc.y + blockHeight > contentEndY) {
+          doc.addPage({ size: "A4", margin: 0 });
+          drawWatermark();
+          doc.y = contentTop;
+        }
+        doc.font("Helvetica-Bold").fontSize(fontSize).fillColor("black").text(label + " ", marginH, doc.y, { width: contentWidth, continued: true });
+        doc.font("Helvetica").text(valueStr);
+        doc.y += 4;
+        if (doc.y > contentEndY) {
+          doc.addPage({ size: "A4", margin: 0 });
+          drawWatermark();
+          doc.y = contentTop;
+        }
+      }
+
+      function writeSectionTitle(title) {
+        checkNewPage(2);
+        doc.y += 4;
+        doc.font("Helvetica-Bold").fontSize(14).fillColor("#621132").text(title, marginH, doc.y, { width: contentWidth });
+        doc.y += lineHeight;
+      }
+
+      // Primera página: marca de agua y contenido desde 19%
+      drawWatermark();
+      doc.y = contentTop;
+      doc.x = marginH;
+
+      doc.font("Helvetica-Bold").fontSize(16).fillColor("#622232").text("Ficha técnica de obra", marginH, doc.y, { width: contentWidth, align: "center" });
+      doc.y += 20;
+
+      writeSectionTitle("Identificación");
+      writeLine("No. SIGROPAM:", o.no_sigropam);
+      writeLine("Título:", o.titulo);
+      writeLine("Artista:", [o.apellido_paterno, o.apellido_materno, o.artista_nombre].filter(Boolean).join(" "));
+      writeLine("Fecha:", o.fecha);
+      writeLine("Técnica:", o.tecnica);
+      writeLine("Tiraje:", o.tiraje);
+
+      writeSectionTitle("Dimensiones (cm)");
+      writeLine("Soporte (Alto × Ancho × Prof.):", [o.medidas_soporte_largo, o.medidas_soporte_ancho, o.medidas_soporte_profundidad].filter(v => v != null && v !== "").join(" × ") || "—");
+      writeLine("Imagen (Alto × Ancho × Prof.):", [o.medidas_imagen_largo, o.medidas_imagen_ancho, o.medidas_imagen_profundidad].filter(v => v != null && v !== "").join(" × ") || "—");
+      writeLine("Marco (Alto × Ancho × Prof.):", [o.medidas_marco_largo, o.medidas_marco_ancho, o.medidas_marco_profundidad].filter(v => v != null && v !== "").join(" × ") || "—");
+
+      writeSectionTitle("Ubicación");
+      writeLine("Ubicación topológica:", ubicacionesTopo.length ? ubicacionesTopo.map(u => `${u.tipo} — ${u.ubicacion}`).join("; ") : "—");
+      writeLine("Ubicación topográfica:", o.ubi_topografica);
+
+      writeSectionTitle("Descripción");
+      writeLine("Descripción:", o.descripcion);
+
+      writeSectionTitle("Conservación y observaciones");
+      writeLine("Estado de conservación:", o.estado_conservacion);
+      writeLine("Observaciones:", o.observaciones);
+
+      writeSectionTitle("Exposiciones");
+      writeLine("Exposiciones:", exposiciones.length > 0 ? exposiciones.map(e => e.exposicion).join("; ") : "—");
 
       doc.end();
       stream.on("finish", resolve);
