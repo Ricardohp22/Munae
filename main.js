@@ -6,6 +6,24 @@ const { initializeDatabase, getDatabase } = require("./src/database");
 let currentUserRole = null; // Cambiar dinámicamente según login
 let db = null; // Se inicializará cuando app esté listo
 
+// Garantizar que solo haya una instancia de la aplicación
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Si otra instancia ya está corriendo, salir inmediatamente
+  app.quit();
+} else {
+  // Si se intenta abrir una segunda instancia, enfocar la ventana existente
+  app.on("second-instance", () => {
+    if (global.mainWindow) {
+      if (global.mainWindow.isMinimized()) {
+        global.mainWindow.restore();
+      }
+      global.mainWindow.focus();
+    }
+  });
+}
+
 function setMenuByRole(role, win) {
   const template = [
       {
@@ -2411,36 +2429,38 @@ ipcMain.on("eliminar-ubicacion-topologica", (event, idUbicacionTopologica) => {
 
 
 
-// Inicializar aplicación
-app.whenReady().then(async () => {
-  // Inicializar módulo de rutas
-  const pathsModule = require("./src/paths");
-  pathsModule.initializeApp(app);
-  
-  // Migrar datos si es necesario (solo en producción)
-  pathsModule.migrateDataIfNeeded();
-  
-  // Inicializar base de datos
-  const dbPath = pathsModule.getDatabasePath();
-  try {
-    db = initializeDatabase(() => dbPath);
-    console.log('Base de datos inicializada correctamente');
-    console.log('📍 Ubicación de la base de datos:', dbPath);
-    console.log('💡 Para acceder manualmente, ve a:', dbPath);
-  } catch (error) {
-    console.error('Error crítico al inicializar la base de datos:', error);
-    // Mostrar error al usuario
-    dialog.showErrorBox(
-      'Error de Inicialización',
-      'No se pudo inicializar la base de datos. Por favor, verifique los permisos y reinicie la aplicación.\n\nError: ' + error.message
-    );
-    app.quit();
-    return;
-  }
-  
-  // Crear ventana
-  createWindow();
-});
+// Inicializar aplicación (solo si esta instancia tiene el lock)
+if (gotTheLock) {
+  app.whenReady().then(async () => {
+    // Inicializar módulo de rutas
+    const pathsModule = require("./src/paths");
+    pathsModule.initializeApp(app);
+    
+    // Migrar datos si es necesario (solo en producción)
+    pathsModule.migrateDataIfNeeded();
+    
+    // Inicializar base de datos
+    const dbPath = pathsModule.getDatabasePath();
+    try {
+      db = initializeDatabase(() => dbPath);
+      console.log('Base de datos inicializada correctamente');
+      console.log('📍 Ubicación de la base de datos:', dbPath);
+      console.log('💡 Para acceder manualmente, ve a:', dbPath);
+    } catch (error) {
+      console.error('Error crítico al inicializar la base de datos:', error);
+      // Mostrar error al usuario
+      dialog.showErrorBox(
+        'Error de Inicialización',
+        'No se pudo inicializar la base de datos. Por favor, verifique los permisos y reinicie la aplicación.\n\nError: ' + error.message
+      );
+      app.quit();
+      return;
+    }
+    
+    // Crear ventana
+    createWindow();
+  });
+}
 
 // IPC handler para obtener la ruta de la base de datos (útil para depuración)
 ipcMain.handle("get-database-path", async () => {
