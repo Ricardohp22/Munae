@@ -621,8 +621,9 @@ ipcMain.handle("buscar-obras", async (event, filtros) => {
   let condiciones = [];
   let params = [];
 
+  // Búsquedas de texto: insensibles a mayúsculas/minúsculas (LOWER)
   if (filtros.sigropam) {
-    condiciones.push("o.no_sigropam LIKE ?");
+    condiciones.push("LOWER(o.no_sigropam) LIKE LOWER(?)");
     params.push(`%${filtros.sigropam}%`);
   }
   if (filtros.autor) {
@@ -631,8 +632,16 @@ ipcMain.handle("buscar-obras", async (event, filtros) => {
   }
 
   if (filtros.keyword) {
-    condiciones.push("(o.titulo LIKE ? OR o.descripcion LIKE ?)");
-    params.push(`%${filtros.keyword}%`, `%${filtros.keyword}%`);
+    condiciones.push("LOWER(o.titulo) LIKE LOWER(?)");
+    params.push(`%${filtros.keyword}%`);
+  }
+  if (filtros.descripcion) {
+    condiciones.push("LOWER(o.descripcion) LIKE LOWER(?)");
+    params.push(`%${filtros.descripcion}%`);
+  }
+  if (filtros.observaciones) {
+    condiciones.push("LOWER(o.observaciones) LIKE LOWER(?)");
+    params.push(`%${filtros.observaciones}%`);
   }
   if (filtros.anio) {
     condiciones.push("o.fecha = ?");
@@ -657,8 +666,9 @@ ipcMain.handle("buscar-obras", async (event, filtros) => {
     params.push(filtros.topografica);
   }
 
+  // Exposición: filtrar por tabla exposiciones (insensible a mayúsculas/minúsculas)
   if (filtros.expo) {
-    condiciones.push("o.exposiciones LIKE ?");
+    condiciones.push("EXISTS (SELECT 1 FROM exposiciones ex WHERE ex.id_obra = o.id_obra AND LOWER(ex.exposicion) LIKE LOWER(?))");
     params.push(`%${filtros.expo}%`);
   }
 

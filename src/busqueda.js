@@ -217,6 +217,8 @@ document.getElementById("btnBuscar").addEventListener("click", async () => {
         tecnica: document.getElementById("filtro_tecnica").value,
         topologica: document.getElementById("filtro_topologica").value,
         topografica: document.getElementById("filtro_topografica").value,
+        descripcion: document.getElementById("filtro_descripcion").value.trim(),
+        observaciones: document.getElementById("filtro_observaciones").value.trim(),
         expo: document.getElementById("filtro_expo").value.trim()
     };
 
