@@ -311,8 +311,13 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
           tiraje,
           medidas_soporte_ancho,
           medidas_soporte_largo,
+          medidas_soporte_profundidad,
           medidas_imagen_ancho,
           medidas_imagen_largo,
+          medidas_imagen_profundidad,
+          medidas_marco_ancho,
+          medidas_marco_largo,
+          medidas_marco_profundidad,
           ubi_topolo_especificacion_manual,
           is_en_prestamo,
           id_ubicacion_topografica,
@@ -322,7 +327,7 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
           exposiciones,
           path_img_baja,
           path_img_alta
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       database.run(
@@ -336,8 +341,13 @@ ipcMain.handle("guardar-obra", async (event, datos) => {
           datos.tiraje || null,
           datos.medidas_soporte_ancho ? Number(datos.medidas_soporte_ancho) : null,
           datos.medidas_soporte_largo ? Number(datos.medidas_soporte_largo) : null,
+          datos.medidas_soporte_profundidad ? Number(datos.medidas_soporte_profundidad) : null,
           datos.medidas_imagen_ancho ? Number(datos.medidas_imagen_ancho) : null,
           datos.medidas_imagen_largo ? Number(datos.medidas_imagen_largo) : null,
+          datos.medidas_imagen_profundidad ? Number(datos.medidas_imagen_profundidad) : null,
+          datos.medidas_marco_ancho ? Number(datos.medidas_marco_ancho) : null,
+          datos.medidas_marco_largo ? Number(datos.medidas_marco_largo) : null,
+          datos.medidas_marco_profundidad ? Number(datos.medidas_marco_profundidad) : null,
           datos.ubi_topo_manual || null,
           datos.is_en_prestamo ? 1 : 0,
           datos.id_ubi_topografica || null,
@@ -738,8 +748,13 @@ ipcMain.handle("get-ultima-obra", async () => {
            o.tiraje,
            o.medidas_soporte_ancho,
            o.medidas_soporte_largo,
+           o.medidas_soporte_profundidad,
            o.medidas_imagen_ancho,
            o.medidas_imagen_largo,
+           o.medidas_imagen_profundidad,
+           o.medidas_marco_ancho,
+           o.medidas_marco_largo,
+           o.medidas_marco_profundidad,
            o.ubi_topolo_especificacion_manual,
            o.id_ubicacion_topografica,
            o.observaciones,
@@ -837,8 +852,13 @@ ipcMain.handle("get-ficha-obra", async (event, idObra) => {
            o.tiraje, 
            o.medidas_soporte_ancho, 
            o.medidas_soporte_largo, 
+           o.medidas_soporte_profundidad,
            o.medidas_imagen_ancho, 
-           o.medidas_imagen_largo,
+           o.medidas_imagen_largo, 
+           o.medidas_imagen_profundidad,
+           o.medidas_marco_ancho,
+           o.medidas_marco_largo,
+           o.medidas_marco_profundidad,
            o.ubi_topolo_especificacion_manual,
            o.observaciones,
            o.estado_conservacion,
@@ -986,8 +1006,9 @@ ipcMain.handle("descargar-obra", async (event, idObra) => {
       doc.text(`Fecha: ${o.fecha}`);
       doc.text(`Técnica: ${o.tecnica || ""}`);
       doc.text(`Tiraje: ${o.tiraje || ""}`);
-      doc.text(`Medidas soporte: ${o.medidas_soporte_ancho} x ${o.medidas_soporte_largo} cm`);
-      doc.text(`Medidas imagen: ${o.medidas_imagen_ancho} x ${o.medidas_imagen_largo} cm`);
+      doc.text(`Medidas soporte: ${o.medidas_soporte_largo || ""} x ${o.medidas_soporte_ancho || ""} x ${o.medidas_soporte_profundidad || ""} cm (Alto x Ancho x Prof.)`);
+      doc.text(`Medidas imagen: ${o.medidas_imagen_largo || ""} x ${o.medidas_imagen_ancho || ""} x ${o.medidas_imagen_profundidad || ""} cm (Alto x Ancho x Prof.)`);
+      doc.text(`Medidas marco: ${o.medidas_marco_largo || ""} x ${o.medidas_marco_ancho || ""} x ${o.medidas_marco_profundidad || ""} cm (Alto x Ancho x Prof.)`);
       doc.text(`Ubicación topológica: ${ubicacionesTopo.map(u => `${u.tipo} - ${u.ubicacion}`).join(", ")}`);
       doc.text(`Ubicación topográfica: ${o.ubi_topografica || ""}`);
       doc.text(`Observaciones: ${o.observaciones || ""}`);

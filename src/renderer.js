@@ -323,7 +323,7 @@ function validarFormulario(datos) {
   if (!datos.ubi_general) errores.push("Seleccione ubicación topológica (almacén general)");
 
   // Dimensiones
-  ["medidas_soporte_ancho", "medidas_soporte_largo", "medidas_imagen_ancho", "medidas_imagen_largo"].forEach(campo => {
+  ["medidas_soporte_ancho", "medidas_soporte_largo", "medidas_soporte_profundidad", "medidas_imagen_ancho", "medidas_imagen_largo", "medidas_imagen_profundidad", "medidas_marco_ancho", "medidas_marco_largo", "medidas_marco_profundidad"].forEach(campo => {
     if (datos[campo] && isNaN(Number(datos[campo]))) {
       errores.push(`${campo.replace(/_/g, " ")} debe ser un número`);
     }
@@ -419,8 +419,13 @@ document.getElementById("btnGuardar").addEventListener("click", async () => {
     tiraje: document.getElementById("tiraje").value,
     medidas_soporte_ancho: document.getElementById("soporte_ancho").value,
     medidas_soporte_largo: document.getElementById("soporte_largo").value,
+    medidas_soporte_profundidad: document.getElementById("soporte_profundidad").value,
     medidas_imagen_ancho: document.getElementById("imagen_ancho").value,
     medidas_imagen_largo: document.getElementById("imagen_largo").value,
+    medidas_imagen_profundidad: document.getElementById("imagen_profundidad").value,
+    medidas_marco_ancho: document.getElementById("marco_ancho").value,
+    medidas_marco_largo: document.getElementById("marco_largo").value,
+    medidas_marco_profundidad: document.getElementById("marco_profundidad").value,
     ubi_general: document.getElementById("ubi_general").value,
     ubi_sub: document.getElementById("ubi_sub").value,
     ubi_sub2: document.getElementById("ubi_sub2").value,

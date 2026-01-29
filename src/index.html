@@ -268,7 +268,7 @@
       <!-- 6. Descripción -->
       <div class="mb-3">
         <label for="descripcion" class="form-label">6. Descripción</label>
-        <input type="text" id="descripcion" class="form-control" maxlength="200">
+        <input type="text" id="descripcion" class="form-control" maxlength="750">
       </div>
 
       <!-- 7. Técnica -->
@@ -312,7 +312,7 @@
       <!-- 10. Estado de conservación -->
       <div class="mb-3">
         <label for="estado_conservacion" class="form-label">10. Estado de conservación</label>
-        <input type="text" id="estado_conservacion" class="form-control" maxlength="50">
+        <input type="text" id="estado_conservacion" class="form-control" maxlength="750">
       </div>
 
       <!-- 11. Exposiciones -->
@@ -332,12 +332,16 @@
         <legend class="w-auto">12. Dimensiones Soporte (cm)</legend>
         <div class="row">
           <div class="col">
+            <label for="soporte_largo" class="form-label">Alto</label>
+            <input type="number" id="soporte_largo" class="form-control" min="0">
+          </div>
+          <div class="col">
             <label for="soporte_ancho" class="form-label">Ancho</label>
             <input type="number" id="soporte_ancho" class="form-control" min="0">
           </div>
           <div class="col">
-            <label for="soporte_largo" class="form-label">Alto</label>
-            <input type="number" id="soporte_largo" class="form-control" min="0">
+            <label for="soporte_profundidad" class="form-label">Profundidad</label>
+            <input type="number" id="soporte_profundidad" class="form-control" min="0">
           </div>
         </div>
       </fieldset>
@@ -347,25 +351,48 @@
         <legend class="w-auto">13. Dimensiones Imagen (cm)</legend>
         <div class="row">
           <div class="col">
+            <label for="imagen_largo" class="form-label">Alto</label>
+            <input type="number" id="imagen_largo" class="form-control" min="0">
+          </div>
+          <div class="col">
             <label for="imagen_ancho" class="form-label">Ancho</label>
             <input type="number" id="imagen_ancho" class="form-control" min="0">
           </div>
           <div class="col">
-            <label for="imagen_largo" class="form-label">Alto</label>
-            <input type="number" id="imagen_largo" class="form-control" min="0">
+            <label for="imagen_profundidad" class="form-label">Profundidad</label>
+            <input type="number" id="imagen_profundidad" class="form-control" min="0">
           </div>
         </div>
       </fieldset>
 
-      <!-- 14. Observaciones -->
+      <!-- 14. Dimensiones Marco -->
+      <fieldset class="border p-3 mb-3">
+        <legend class="w-auto">14. Dimensiones Marco (cm)</legend>
+        <div class="row">
+          <div class="col">
+            <label for="marco_largo" class="form-label">Alto</label>
+            <input type="number" id="marco_largo" class="form-control" min="0">
+          </div>
+          <div class="col">
+            <label for="marco_ancho" class="form-label">Ancho</label>
+            <input type="number" id="marco_ancho" class="form-control" min="0">
+          </div>
+          <div class="col">
+            <label for="marco_profundidad" class="form-label">Profundidad</label>
+            <input type="number" id="marco_profundidad" class="form-control" min="0">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- 15. Observaciones -->
       <div class="mb-3">
-        <label for="observaciones" class="form-label">14. Observaciones</label>
-        <input type="text" id="observaciones" class="form-control" maxlength="200">
+        <label for="observaciones" class="form-label">15. Observaciones</label>
+        <input type="text" id="observaciones" class="form-control" maxlength="750">
       </div>
 
-      <!-- 15. Imágenes BAJA resolución -->
+      <!-- 16. Imágenes BAJA resolución -->
       <div class="mb-3">
-        <label class="form-label">15. Imágenes baja resolución</label>
+        <label class="form-label">16. Imágenes baja resolución</label>
         <div class="d-flex gap-2 mb-2">
           <button type="button" id="btnAddBaja" class="btn btn-secondary">Agregar (hasta 4)</button>
           <span class="text-muted" id="bajaCount">(0/4)</span>
@@ -373,9 +400,9 @@
         <ul id="listBaja" class="list-group small"></ul>
       </div>
 
-      <!-- 16. Imágenes ALTA resolución -->
+      <!-- 17. Imágenes ALTA resolución -->
       <div class="mb-3">
-        <label class="form-label">16. Imágenes alta resolución</label>
+        <label class="form-label">17. Imágenes alta resolución</label>
         <div class="d-flex gap-2 mb-2">
           <button type="button" id="btnAddAlta" class="btn btn-secondary">Agregar (hasta 4)</button>
           <span class="text-muted" id="altaCount">(0/4)</span>

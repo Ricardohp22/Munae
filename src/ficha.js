@@ -11,8 +11,9 @@ window.electronAPI.onCargarFicha(async (idObra) => {
     <p><strong>Fecha:</strong> ${obra.fecha}</p>
     <p><strong>Técnica:</strong> ${obra.tecnica || ""}</p>
     <p><strong>Tiraje:</strong> ${obra.tiraje || ""}</p>
-    <p><strong>Medidas soporte:</strong> ${obra.medidas_soporte_ancho} x ${obra.medidas_soporte_largo} cm</p>
-    <p><strong>Medidas imagen:</strong> ${obra.medidas_imagen_ancho} x ${obra.medidas_imagen_largo} cm</p>
+    <p><strong>Medidas soporte:</strong> ${obra.medidas_soporte_largo || ""} x ${obra.medidas_soporte_ancho || ""} x ${obra.medidas_soporte_profundidad || ""} cm (Alto x Ancho x Prof.)</p>
+    <p><strong>Medidas imagen:</strong> ${obra.medidas_imagen_largo || ""} x ${obra.medidas_imagen_ancho || ""} x ${obra.medidas_imagen_profundidad || ""} cm (Alto x Ancho x Prof.)</p>
+    <p><strong>Medidas marco:</strong> ${obra.medidas_marco_largo || ""} x ${obra.medidas_marco_ancho || ""} x ${obra.medidas_marco_profundidad || ""} cm (Alto x Ancho x Prof.)</p>
     <p><strong>Ubicación topológica:</strong> ${obra.ubicacionesTopo.map(u => `${u.tipo} - ${u.ubicacion}`).join(", ")}</p>
     <p><strong>Ubicación topográfica:</strong> ${obra.ubi_topografica || ""}</p>
     <p><strong>Observaciones:</strong> ${obra.observaciones || ""}</p>
